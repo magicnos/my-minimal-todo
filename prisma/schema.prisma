@@ -1,5 +1,4 @@
 // データベースの設計図（スキーマ）です。
-// 安定版（v5）の書き方です。
 
 generator client {
   provider = "prisma-client-js"
@@ -7,7 +6,8 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("POSTGRES_PRISMA_URL")
+  // .env ファイルの中の名前に合わせます
+  url      = env("PRISMA_DATABASE_URL")
 }
 
 // TODOタスクの情報を保存する「本棚（モデル）」の定義です。
