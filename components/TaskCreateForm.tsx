@@ -1,29 +1,77 @@
 'use client';
 
-import { createTaskAction } from '@/app/actions';
+import { createTaskAction, updateTaskAction } from '@/app/actions';
 import { useState } from 'react';
 
+// 日時を <input type="datetime-local"> が読み取れる形式にする関数
+const formatDateTime = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
 /**
- * 新しいタスクを作成するためのフォーム画面です。
+ * タスクの新規作成および編集を行うフォームです。
  */
-export default function TaskCreateForm({ onComplete }: { onComplete: () => void }) {
-  // 送信中かどうかを管理する状態（連打防止）
+export default function TaskCreateForm({ 
+  onComplete, 
+  editTaskData // 編集の場合、ここに古いデータが入ります
+}: { 
+  onComplete: () => void;
+  editTaskData?: any;
+}) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // 通知日時のリストを管理する状態（最初は既存の通知、なければ1つ空っぽを用意）
+  const initialNotifications = editTaskData?.notifications?.map((n: any) => formatDateTime(new Date(n.notificationTime))) || [""];
+  const [notificationTimeList, setNotificationTimeList] = useState<string[]>(initialNotifications);
+
+  // デフォルトの開始時間（今）と期限（一日後）
+  const defaultStart = formatDateTime(new Date());
+  const defaultEnd = formatDateTime(new Date(Date.now() + 24 * 60 * 60 * 1000));
+
   /**
-   * フォームが送信された時の処理
+   * 通知入力欄を増やすボタンが押されたとき
    */
+  const handleNotificationAddButtonClick = () => {
+    setNotificationTimeList([...notificationTimeList, ""]);
+  };
+
+  /**
+   * 通知入力欄を削除するボタンが押されたとき
+   */
+  const handleNotificationDeleteButtonClick = (index: number) => {
+    setNotificationTimeList(notificationTimeList.filter((_, i) => i !== index));
+  };
+
+  /**
+   * 通知の時間が変更されたとき
+   */
+  const handleNotificationChange = (index: number, value: string) => {
+    const newList = [...notificationTimeList];
+    newList[index] = value;
+    setNotificationTimeList(newList);
+  };
+
   const handleFormSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault(); // ページがリロードされるのを防ぐ
+    event.preventDefault();
     setIsSubmitting(true);
 
     const formData = new FormData(event.currentTarget);
     try {
-      await createTaskAction(formData);
-      onComplete(); // 成功したらフォームを閉じる
+      if (editTaskData) {
+        // 編集の場合
+        await updateTaskAction(editTaskData.id, formData);
+      } else {
+        // 新規作成の場合
+        await createTaskAction(formData);
+      }
+      onComplete();
     } catch (error) {
       alert('保存に失敗しました。');
-      console.error(error);
     } finally {
       setIsSubmitting(false);
     }
@@ -32,62 +80,76 @@ export default function TaskCreateForm({ onComplete }: { onComplete: () => void 
   return (
     <div style={overlayStyle}>
       <form onSubmit={handleFormSubmit} style={formCardStyle}>
-        <h2 style={formTitleStyle}>新しいタスク</h2>
+        <h2 style={formTitleStyle}>{editTaskData ? 'タスクを編集' : '新しいタスク'}</h2>
 
-        {/* タイトル入力 */}
         <div style={inputGroupStyle}>
           <label style={labelStyle}>タイトル</label>
-          <input name="taskTitle" type="text" required placeholder="何をする？" style={inputStyle} />
+          <input name="taskTitle" type="text" required defaultValue={editTaskData?.taskTitle} style={inputStyle} />
         </div>
 
-        {/* メモ入力 */}
         <div style={inputGroupStyle}>
           <label style={labelStyle}>メモ</label>
-          <textarea name="taskMemo" placeholder="詳しい説明（任意）" style={textareaStyle} />
+          <textarea name="taskMemo" defaultValue={editTaskData?.taskMemo} style={textareaStyle} />
         </div>
 
-        {/* 期限入力 */}
-        <div style={inputGroupStyle}>
-          <label style={labelStyle}>期限</label>
-          <input name="taskDeadline" type="datetime-local" required style={inputStyle} />
+        {/* 時間設定の横並び */}
+        <div style={rowStyle}>
+          <div style={halfInputStyle}>
+            <label style={labelStyle}>開始時間</label>
+            <input name="taskStartTime" type="datetime-local" required 
+              defaultValue={editTaskData ? formatDateTime(new Date(editTaskData.taskStartTime)) : defaultStart} 
+              style={inputStyle} />
+          </div>
+          <div style={halfInputStyle}>
+            <label style={labelStyle}>期限</label>
+            <input name="taskDeadline" type="datetime-local" required 
+              defaultValue={editTaskData ? formatDateTime(new Date(editTaskData.taskDeadline)) : defaultEnd} 
+              style={inputStyle} />
+          </div>
         </div>
 
-        {/* 優先度とタイプ（横並び） */}
         <div style={rowStyle}>
           <div style={halfInputStyle}>
             <label style={labelStyle}>優先度</label>
-            <select name="taskPriority" style={inputStyle}>
+            <select name="taskPriority" defaultValue={editTaskData?.taskPriority || "MEDIUM"} style={inputStyle}>
               <option value="LOW">低</option>
-              <option value="MEDIUM" selected>中</option>
+              <option value="MEDIUM">中</option>
               <option value="HIGH">高</option>
             </select>
           </div>
           <div style={halfInputStyle}>
             <label style={labelStyle}>タイプ</label>
-            <select name="taskType" style={inputStyle}>
+            <select name="taskType" defaultValue={editTaskData?.taskType || "SINGLE"} style={inputStyle}>
               <option value="SINGLE">一回きり</option>
               <option value="HABIT">習慣</option>
             </select>
           </div>
         </div>
 
-        {/* 通知設定 */}
+        {/* 複数の通知設定 */}
         <div style={notificationSectionStyle}>
-          <label style={checkboxLabelStyle}>
-            <input name="isNotificationEnabled" type="checkbox" />
-            <span style={{ marginLeft: '8px' }}>通知を有効にする</span>
-          </label>
-          <div style={{ marginTop: '8px' }}>
-            <label style={smallLabelStyle}>何分前に通知する？</label>
-            <input name="notificationLeadTimeMinutes" type="number" defaultValue="0" min="0" style={smallInputStyle} />
-          </div>
+          <label style={labelStyle}>🔔 通知設定（複数可）</label>
+          {notificationTimeList.map((time, index) => (
+            <div key={index} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+              <input 
+                name="notificationTimes" 
+                type="datetime-local" 
+                value={time} 
+                onChange={(e) => handleNotificationChange(index, e.target.value)}
+                style={{ ...inputStyle, flex: 1 }} 
+              />
+              <button type="button" onClick={() => handleNotificationDeleteButtonClick(index)} style={deleteSmallButtonStyle}>×</button>
+            </div>
+          ))}
+          <button type="button" onClick={handleNotificationAddButtonClick} style={addSmallButtonStyle}>
+            ＋ 通知を追加
+          </button>
         </div>
 
-        {/* ボタン類 */}
         <div style={buttonContainerStyle}>
           <button type="button" onClick={onComplete} style={cancelButtonStyle}>キャンセル</button>
           <button type="submit" disabled={isSubmitting} style={submitButtonStyle}>
-            {isSubmitting ? '保存中...' : 'タスクを追加'}
+            {isSubmitting ? '保存中...' : editTaskData ? '更新する' : '保存する'}
           </button>
         </div>
       </form>
@@ -95,132 +157,19 @@ export default function TaskCreateForm({ onComplete }: { onComplete: () => void 
   );
 }
 
-// --- スタイル（スマホ優先のミニマリストデザイン） ---
-
-const overlayStyle: React.CSSProperties = {
-  position: 'fixed',
-  top: 0, left: 0, right: 0, bottom: 0,
-  backgroundColor: 'rgba(0,0,0,0.8)',
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'flex-end', // スマホで下から出てくる感じ
-  zIndex: 1000,
-};
-
-const formCardStyle: React.CSSProperties = {
-  backgroundColor: '#171717',
-  width: '100%',
-  maxWidth: '500px',
-  padding: '24px',
-  borderTopLeftRadius: '24px',
-  borderTopRightRadius: '24px',
-  maxHeight: '90vh',
-  overflowY: 'auto',
-};
-
-const formTitleStyle: React.CSSProperties = {
-  marginBottom: '20px',
-  fontSize: '1.2rem',
-  fontWeight: 'bold',
-};
-
-const inputGroupStyle: React.CSSProperties = {
-  marginBottom: '16px',
-};
-
-const labelStyle: React.CSSProperties = {
-  display: 'block',
-  marginBottom: '6px',
-  fontSize: '0.85rem',
-  opacity: 0.7,
-};
-
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '12px',
-  borderRadius: '8px',
-  border: '1px solid #333',
-  backgroundColor: '#0a0a0a',
-  color: '#fff',
-  fontSize: '1rem',
-};
-
-const textareaStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '12px',
-  borderRadius: '8px',
-  border: '1px solid #333',
-  backgroundColor: '#0a0a0a',
-  color: '#fff',
-  fontSize: '1rem',
-  minHeight: '80px',
-  resize: 'none',
-};
-
-const rowStyle: React.CSSProperties = {
-  display: 'flex',
-  gap: '12px',
-  marginBottom: '16px',
-};
-
-const halfInputStyle: React.CSSProperties = {
-  flex: 1,
-};
-
-const notificationSectionStyle: React.CSSProperties = {
-  padding: '16px',
-  backgroundColor: '#222',
-  borderRadius: '12px',
-  marginBottom: '20px',
-};
-
-const checkboxLabelStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  fontSize: '0.9rem',
-  cursor: 'pointer',
-};
-
-const smallLabelStyle: React.CSSProperties = {
-  fontSize: '0.75rem',
-  opacity: 0.6,
-  display: 'block',
-};
-
-const smallInputStyle: React.CSSProperties = {
-  width: '80px',
-  padding: '8px',
-  borderRadius: '6px',
-  border: '1px solid #444',
-  backgroundColor: '#0a0a0a',
-  color: '#fff',
-  marginTop: '4px',
-};
-
-const buttonContainerStyle: React.CSSProperties = {
-  display: 'flex',
-  gap: '12px',
-};
-
-const submitButtonStyle: React.CSSProperties = {
-  flex: 2,
-  padding: '16px',
-  borderRadius: '12px',
-  border: 'none',
-  backgroundColor: '#ededed',
-  color: '#0a0a0a',
-  fontSize: '1rem',
-  fontWeight: 'bold',
-  cursor: 'pointer',
-};
-
-const cancelButtonStyle: React.CSSProperties = {
-  flex: 1,
-  padding: '16px',
-  borderRadius: '12px',
-  border: '1px solid #333',
-  backgroundColor: 'transparent',
-  color: '#fff',
-  fontSize: '1rem',
-  cursor: 'pointer',
-};
+// --- スタイル ---
+const overlayStyle: React.CSSProperties = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'flex-end', zIndex: 1000 };
+const formCardStyle: React.CSSProperties = { backgroundColor: '#171717', width: '100%', maxWidth: '500px', padding: '24px', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', maxHeight: '90vh', overflowY: 'auto' };
+const formTitleStyle: React.CSSProperties = { marginBottom: '20px', fontSize: '1.2rem', fontWeight: 'bold' };
+const inputGroupStyle: React.CSSProperties = { marginBottom: '16px' };
+const labelStyle: React.CSSProperties = { display: 'block', marginBottom: '6px', fontSize: '0.85rem', opacity: 0.7 };
+const inputStyle: React.CSSProperties = { width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #333', backgroundColor: '#0a0a0a', color: '#fff', fontSize: '1rem' };
+const textareaStyle: React.CSSProperties = { width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #333', backgroundColor: '#0a0a0a', color: '#fff', fontSize: '1rem', minHeight: '80px', resize: 'none' };
+const rowStyle: React.CSSProperties = { display: 'flex', gap: '12px', marginBottom: '16px' };
+const halfInputStyle: React.CSSProperties = { flex: 1 };
+const notificationSectionStyle: React.CSSProperties = { padding: '16px', backgroundColor: '#222', borderRadius: '12px', marginBottom: '20px' };
+const addSmallButtonStyle: React.CSSProperties = { padding: '8px 12px', borderRadius: '6px', border: '1px dashed #555', backgroundColor: 'transparent', color: '#aaa', fontSize: '0.8rem', cursor: 'pointer', width: '100%' };
+const deleteSmallButtonStyle: React.CSSProperties = { width: '40px', backgroundColor: '#333', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' };
+const buttonContainerStyle: React.CSSProperties = { display: 'flex', gap: '12px' };
+const submitButtonStyle: React.CSSProperties = { flex: 2, padding: '16px', borderRadius: '12px', border: 'none', backgroundColor: '#ededed', color: '#0a0a0a', fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer' };
+const cancelButtonStyle: React.CSSProperties = { flex: 1, padding: '16px', borderRadius: '12px', border: '1px solid #333', backgroundColor: 'transparent', color: '#fff', fontSize: '1rem', cursor: 'pointer' };

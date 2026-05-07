@@ -6,20 +6,39 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  // .env ファイルの中の名前に合わせます
   url      = env("PRISMA_DATABASE_URL")
 }
 
-// TODOタスクの情報を保存する「本棚（モデル）」の定義です。
+// TODOタスクの本体
 model TodoTask {
   id                      Int      @id @default(autoincrement())
   taskTitle               String
   taskMemo                String?
+  
+  // 開始時間（新しく追加）
+  taskStartTime           DateTime @default(now())
+  
+  // 期限
   taskDeadline            DateTime
+  
   taskPriority            String   @default("MEDIUM")
   taskType                String   @default("SINGLE")
-  isNotificationEnabled   Boolean  @default(false)
-  notificationLeadTimeMinutes Int  @default(0)
+  
+  // 通知設定（1つのタスクに対して複数を設定可能に）
+  notifications           TaskNotification[]
+  
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
+}
+
+// 通知時間のリスト
+model TaskNotification {
+  id                Int      @id @default(autoincrement())
+  
+  // 具体的な通知日時
+  notificationTime  DateTime
+  
+  // どのタスクに紐付いているか
+  todoTask          TodoTask @relation(fields: [todoTaskId], references: [id], onDelete: Cascade)
+  todoTaskId        Int
 }

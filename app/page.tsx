@@ -1,22 +1,22 @@
 import prisma from '@/lib/prisma';
 import TodoClientContent from '@/components/TodoClientContent';
 
-// ビルド時にデータベースに接続しようとするのを防ぎます
 export const dynamic = 'force-dynamic';
 
 /**
- * サーバー側でデータを取得するメインページです。
+ * サーバー側でデータを取得するメインページ
  */
 export default async function TodoMainPage() {
-  // データベースからタスク一覧を読み込みます
-  // 作成日時が新しい順（降順）に並べます
+  // データベースからタスク一覧を、通知データも含めて読み込みます
   const allTodoTasks = await prisma.todoTask.findMany({
+    include: {
+      notifications: true, // 通知データも一緒に持ってくる
+    },
     orderBy: {
       createdAt: 'desc',
     },
   });
 
-  // 実際の表示やボタン操作は「クライアントコンポーネント」に任せます
   return (
     <main style={mainContainerStyle}>
       <header style={headerStyle}>
@@ -28,18 +28,6 @@ export default async function TodoMainPage() {
   );
 }
 
-const mainContainerStyle: React.CSSProperties = {
-  padding: '20px',
-  maxWidth: '600px',
-  margin: '0 auto',
-  minHeight: '100vh',
-};
-
-const headerStyle: React.CSSProperties = {
-  padding: '40px 0 20px',
-};
-
-const titleStyle: React.CSSProperties = {
-  fontSize: '2rem',
-  fontWeight: 'bold',
-};
+const mainContainerStyle: React.CSSProperties = { padding: '20px', maxWidth: '600px', margin: '0 auto', minHeight: '100vh' };
+const headerStyle: React.CSSProperties = { padding: '40px 0 20px' };
+const titleStyle: React.CSSProperties = { fontSize: '2rem', fontWeight: 'bold' };
