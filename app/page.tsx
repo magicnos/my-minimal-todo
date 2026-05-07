@@ -1,6 +1,9 @@
 import prisma from '@/lib/prisma';
 import TodoClientContent from '@/components/TodoClientContent';
 
+// ビルド時にデータベースに接続しようとするのを防ぎます
+export const dynamic = 'force-dynamic';
+
 /**
  * サーバー側でデータを取得するメインページです。
  */
