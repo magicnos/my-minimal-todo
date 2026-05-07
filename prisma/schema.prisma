@@ -1,4 +1,5 @@
 // データベースの設計図（スキーマ）です。
+// 最新のPrisma（v7以降）では、接続先はここではなく別のファイルに書きます。
 
 generator client {
   provider = "prisma-client-js"
@@ -6,40 +7,21 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("POSTGRES_PRISMA_URL") // Vercel Postgres用の設定です
+  // url は削除またはコメントアウトします
 }
 
 /**
  * TODOタスクの情報を保存する「本棚（モデル）」の定義です。
  */
 model TodoTask {
-  // 自動で増える番号（ID）
   id                      Int      @id @default(autoincrement())
-  
-  // タスクのタイトル
   taskTitle               String
-  
-  // タスクの詳しいメモ（空っぽでもOK）
   taskMemo                String?
-  
-  // 期限の日時
   taskDeadline            DateTime
-  
-  // 優先度（HIGH:高, MEDIUM:中, LOW:低）
   taskPriority            String   @default("MEDIUM")
-  
-  // タスクの種類（SINGLE:一回, HABIT:習慣）
   taskType                String   @default("SINGLE")
-  
-  // 通知が有効かどうか
   isNotificationEnabled   Boolean  @default(false)
-  
-  // 期限の何分前に通知するか
   notificationLeadTimeMinutes Int  @default(0)
-
-  // タスクが作成された日時（自動で記録）
   createdAt               DateTime @default(now())
-  
-  // タスクが更新された日時（自動で記録）
   updatedAt               DateTime @updatedAt
 }
