@@ -1,5 +1,5 @@
 // データベースの設計図（スキーマ）です。
-// 最新のPrisma（v7以降）では、接続先はここではなく別のファイルに書きます。
+// 安定版（v5）の書き方です。
 
 generator client {
   provider = "prisma-client-js"
@@ -7,12 +7,10 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  // url は削除またはコメントアウトします
+  url      = env("POSTGRES_PRISMA_URL")
 }
 
-/**
- * TODOタスクの情報を保存する「本棚（モデル）」の定義です。
- */
+// TODOタスクの情報を保存する「本棚（モデル）」の定義です。
 model TodoTask {
   id                      Int      @id @default(autoincrement())
   taskTitle               String
