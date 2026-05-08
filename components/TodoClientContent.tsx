@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import TaskCreateForm from './TaskCreateForm';
-import { deleteTaskAction, completeTaskAction } from '@/app/actions';
+import { deleteTaskAction, completeTaskAction, updateTaskOrderAction } from '@/app/actions';
 
 export default function TodoClientContent({ initialTasks }: { initialTasks: any[] }) {
   const [isFormVisible, setIsFormVisible] = useState(false);
@@ -14,122 +14,115 @@ export default function TodoClientContent({ initialTasks }: { initialTasks: any[
     return () => clearInterval(timer);
   }, []);
 
+  /**
+   * 並び替え処理：特定のインデックスの要素を移動させる
+   */
+  const handleMoveTask = async (index: number, direction: 'up' | 'down', list: any[]) => {
+    const newList = [...list];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= newList.length) return;
+
+    // 入れ替え
+    [newList[index], newList[targetIndex]] = [newList[targetIndex], newList[index]];
+    
+    // 全体のIDリストを作成してサーバーに送る
+    const allIds = newList.map(t => t.id);
+    await updateTaskOrderAction(allIds);
+  };
+
   const getTaskStatus = (task: any) => {
     if (task.taskType === 'SINGLE') return { isDone: false, target: 1, current: 0 };
-
+    
     let target = task.habitTargetCount || 1;
     let effectiveCount = task.completedCount;
-
     const lastDone = task.lastCompletedAt ? new Date(task.lastCompletedAt) : null;
-    
+
     if (task.taskType === 'DAILY') {
       const currentDay = currentTime.getDay();
       target = task.habitDailySchedule?.[currentDay] || 0;
-      if (lastDone && lastDone.toDateString() !== currentTime.toDateString()) {
-        effectiveCount = 0;
-      }
-    } else {
+      if (lastDone && lastDone.toDateString() !== currentTime.toDateString()) effectiveCount = 0;
+    } else if (task.taskType === 'SINGLE_DAY') {
+      // 一日（旧毎週）：24時間ごとにリセット
+      if (lastDone && (currentTime.getTime() - lastDone.getTime() > 86400000)) effectiveCount = 0;
+    } else if (task.taskType === 'MULTI_DAY') {
+      // 複数日：期間の開始・終了に基づいて判定（簡易的に作成日からの周期で計算）
+      const periodMs = 7 * 86400000; // 週単位
       const createdAt = new Date(task.createdAt);
-      const periodMs = (task.habitPeriodDays || 7) * 86400000;
-      const currentCycleStartMs = createdAt.getTime() + Math.floor((currentTime.getTime() - createdAt.getTime()) / periodMs) * periodMs;
-      if (lastDone && lastDone.getTime() < currentCycleStartMs) {
-        effectiveCount = 0;
-      }
+      const cycleStart = createdAt.getTime() + Math.floor((currentTime.getTime() - createdAt.getTime()) / periodMs) * periodMs;
+      if (lastDone && lastDone.getTime() < cycleStart) effectiveCount = 0;
     }
 
     if (target === 0) return { isDone: true, target: 0, current: 0 };
     return { isDone: effectiveCount >= target, target, current: effectiveCount };
   };
 
-  const renderTaskCard = (task: any) => {
+  const renderTaskCard = (task: any, index: number, list: any[]) => {
     const { isDone, target, current } = getTaskStatus(task);
 
     return (
-      <div key={task.id} style={{
-        ...taskCardStyle,
-        opacity: isDone ? 0.2 : 1,
-        filter: isDone ? 'grayscale(0.5)' : 'none',
-      }}>
+      <div key={task.id} style={{ ...taskCardStyle, opacity: isDone ? 0.2 : 1 }}>
+        {/* 並び替えボタン */}
+        <div style={orderButtonsStyle}>
+          <button onClick={() => handleMoveTask(index, 'up', list)} style={orderButtonStyle} disabled={index === 0}>▲</button>
+          <button onClick={() => handleMoveTask(index, 'down', list)} style={orderButtonStyle} disabled={index === list.length - 1}>▼</button>
+        </div>
+
         <div style={taskContentStyle} onClick={() => { setEditingTask(task); setIsFormVisible(true); }}>
           <div style={taskHeaderStyle}>
             <span style={getPriorityBadgeStyle(task.taskPriority)}>{task.taskPriority}</span>
-            {isDone && target > 0 && <span style={doneBadgeStyle}>✅ 完了</span>}
-            {target === 0 && <span style={upcomingBadgeStyle}>☕ お休み</span>}
+            {isDone && target > 0 && <span style={doneBadgeStyle}>✅</span>}
           </div>
-          
           <h3 style={taskTitleStyle}>{task.taskTitle}</h3>
-          {task.taskMemo && <p style={taskMemoStyle}>{task.taskMemo}</p>}
-          
           <div style={timeInfoStyle}>
-            {task.taskType === 'SINGLE' ? (
-              <div style={timeRowStyle}>
-                <span style={timeLabelStyle}>〆:</span>
-                <span>{new Date(task.taskDeadline).toLocaleString('ja-JP', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
-              </div>
-            ) : (
-              <div style={timeRowStyle}>
-                <span style={timeLabelStyle}>🔄</span>
-                <span>{task.taskType === 'DAILY' ? '毎日' : `${task.habitPeriodDays}日ごと`}</span>
-              </div>
-            )}
+            {task.taskType === 'SINGLE' ? `〆: ${new Date(task.taskDeadline).toLocaleString('ja-JP', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}` 
+            : task.taskType === 'MULTI_DAY' ? `${['日','月','火','水','木','金','土'][task.habitStartDay]} ${task.habitStartTime} 〜 ${['日','月','火','水','木','金','土'][task.habitEndDay]} ${task.habitEndTime}`
+            : task.taskType === 'SINGLE_DAY' ? '一日' : '毎日'}
           </div>
-
-          {task.taskType !== 'SINGLE' && target > 0 && (
-            <div style={progressStyle}>進捗: {current} / {target}</div>
-          )}
+          {task.taskType !== 'SINGLE' && target > 0 && <div style={progressStyle}>{current} / {target}</div>}
         </div>
         
-        <button 
-          onClick={() => task.taskType === 'SINGLE' ? (confirm('完了として削除しますか？') && deleteTaskAction(task.id)) : completeTaskAction(task.id, current)} 
-          disabled={isDone}
-          style={{...completeButtonStyle, cursor: isDone ? 'not-allowed' : 'pointer', opacity: isDone ? 0.3 : 1}}
-        >
-          {isDone ? '●' : '✓'}
-        </button>
+        <button onClick={() => task.taskType === 'SINGLE' ? (confirm('削除？') && deleteTaskAction(task.id)) : completeTaskAction(task.id, current)} 
+          disabled={isDone} style={completeButtonStyle}>{isDone ? '●' : '✓'}</button>
       </div>
     );
   };
 
-  const habits = initialTasks.filter(t => t.taskType !== 'SINGLE');
-  const singles = initialTasks.filter(t => t.taskType === 'SINGLE');
+  // sortOrder に基づいて並び替えてから表示
+  const sortedTasks = [...initialTasks].sort((a, b) => a.sortOrder - b.sortOrder);
+  const habits = sortedTasks.filter(t => t.taskType !== 'SINGLE');
+  const singles = sortedTasks.filter(t => t.taskType === 'SINGLE');
 
   return (
     <>
       <div style={columnsContainerStyle}>
         <section style={columnStyle}>
-          <h2 style={sectionTitleStyle}>🔄 習慣</h2>
-          <div style={listStyle}>{habits.map(renderTaskCard)}</div>
+          <h2 style={sectionTitleStyle}>🔄 習慣 (毎日/一日/複数日)</h2>
+          <div style={listStyle}>{habits.map((t, i) => renderTaskCard(t, i, habits))}</div>
         </section>
-
         <section style={columnStyle}>
           <h2 style={sectionTitleStyle}>📍 一回きり</h2>
-          <div style={listStyle}>{singles.map(renderTaskCard)}</div>
+          <div style={listStyle}>{singles.map((t, i) => renderTaskCard(t, i, singles))}</div>
         </section>
       </div>
-
       <button onClick={() => { setEditingTask(null); setIsFormVisible(true); }} style={floatingAddButtonStyle}>+</button>
-
       {isFormVisible && <TaskCreateForm onComplete={() => { setIsFormVisible(false); setEditingTask(null); }} editTaskData={editingTask} />}
     </>
   );
 }
 
-// --- スタイル (一部抜粋) ---
-const columnsContainerStyle: React.CSSProperties = { display: 'flex', gap: '24px', flexWrap: 'wrap' };
+const columnsContainerStyle: React.CSSProperties = { display: 'flex', gap: '20px', flexWrap: 'wrap' };
 const columnStyle: React.CSSProperties = { flex: '1', minWidth: '320px' };
-const sectionTitleStyle: React.CSSProperties = { fontSize: '0.9rem', opacity: 0.5, marginBottom: '16px', fontWeight: 'bold', borderLeft: '3px solid #ededed', paddingLeft: '8px' };
-const listStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '12px', paddingBottom: '100px' };
-const taskCardStyle: React.CSSProperties = { padding: '16px', borderRadius: '16px', backgroundColor: '#171717', border: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center' };
+const sectionTitleStyle: React.CSSProperties = { fontSize: '0.85rem', opacity: 0.5, marginBottom: '12px', fontWeight: 'bold' };
+const listStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '10px', paddingBottom: '100px' };
+const taskCardStyle: React.CSSProperties = { padding: '12px', borderRadius: '14px', backgroundColor: '#171717', border: '1px solid #333', display: 'flex', alignItems: 'center', gap: '10px' };
+const orderButtonsStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '4px' };
+const orderButtonStyle: React.CSSProperties = { background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: '0.7rem' };
 const taskContentStyle: React.CSSProperties = { flex: 1, cursor: 'pointer' };
-const taskHeaderStyle: React.CSSProperties = { display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' };
-const taskTitleStyle: React.CSSProperties = { fontSize: '1.1rem', fontWeight: '600', marginBottom: '6px' };
-const taskMemoStyle: React.CSSProperties = { fontSize: '0.85rem', opacity: 0.7, marginBottom: '12px', whiteSpace: 'pre-wrap' };
-const timeInfoStyle: React.CSSProperties = { fontSize: '0.75rem', opacity: 0.6, display: 'flex', flexDirection: 'column', gap: '4px' };
-const timeRowStyle: React.CSSProperties = { display: 'flex', gap: '8px' };
-const timeLabelStyle: React.CSSProperties = { opacity: 0.6 };
-const progressStyle: React.CSSProperties = { marginTop: '8px', fontSize: '0.75rem', color: '#4dff4d', fontWeight: 'bold' };
-const doneBadgeStyle: React.CSSProperties = { fontSize: '0.65rem', color: '#4dff4d', backgroundColor: 'rgba(77, 255, 77, 0.1)', padding: '2px 6px', borderRadius: '4px' };
-const upcomingBadgeStyle: React.CSSProperties = { fontSize: '0.65rem', color: '#aaa', backgroundColor: '#333', padding: '2px 6px', borderRadius: '4px' };
-const getPriorityBadgeStyle = (p: string) => ({ fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', backgroundColor: p === 'HIGH' ? '#ff4d4d' : p === 'MEDIUM' ? '#ffa500' : '#4dff4d', color: '#000', fontWeight: 'bold' });
-const completeButtonStyle: React.CSSProperties = { width: '44px', height: '44px', borderRadius: '22px', border: '2px solid #333', backgroundColor: 'transparent', color: '#4dff4d', fontSize: '1.2rem', marginLeft: '12px', flexShrink: 0 };
-const floatingAddButtonStyle: React.CSSProperties = { position: 'fixed', bottom: '30px', right: '30px', width: '64px', height: '64px', borderRadius: '32px', backgroundColor: '#ededed', color: '#0a0a0a', border: 'none', fontSize: '32px', cursor: 'pointer', zIndex: 100, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' };
+const taskHeaderStyle: React.CSSProperties = { display: 'flex', gap: '6px', alignItems: 'center', marginBottom: '4px' };
+const taskTitleStyle: React.CSSProperties = { fontSize: '1rem', fontWeight: 'bold' };
+const timeInfoStyle: React.CSSProperties = { fontSize: '0.7rem', opacity: 0.5 };
+const progressStyle: React.CSSProperties = { fontSize: '0.75rem', color: '#4dff4d', marginTop: '4px', fontWeight: 'bold' };
+const doneBadgeStyle: React.CSSProperties = { fontSize: '0.8rem' };
+const getPriorityBadgeStyle = (p: string) => ({ fontSize: '0.6rem', padding: '1px 5px', borderRadius: '3px', backgroundColor: p === 'HIGH' ? '#ff4d4d' : p === 'MEDIUM' ? '#ffa500' : '#4dff4d', color: '#000' });
+const completeButtonStyle: React.CSSProperties = { width: '40px', height: '40px', borderRadius: '20px', border: '1px solid #333', backgroundColor: 'transparent', color: '#4dff4d', fontSize: '1.1rem' };
+const floatingAddButtonStyle: React.CSSProperties = { position: 'fixed', bottom: '30px', right: '30px', width: '60px', height: '60px', borderRadius: '30px', backgroundColor: '#fff', color: '#000', fontSize: '24px', border: 'none', cursor: 'pointer', zIndex: 100 };

@@ -8,13 +8,14 @@ function getTaskDataFromForm(formData: FormData) {
   const taskMemo = formData.get('taskMemo') as string;
   const taskType = formData.get('taskType') as string;
   const taskPriority = formData.get('taskPriority') as string;
-  
   const deadlineStr = formData.get('taskDeadline') as string;
-  const taskDeadline = deadlineStr ? new Date(deadlineStr) : new Date();
 
-  let habitPeriodDays = null;
-  let habitTargetCount = 1;
   let habitDailySchedule = null;
+  let habitStartDay = null;
+  let habitStartTime = null;
+  let habitEndDay = null;
+  let habitEndTime = null;
+  let habitTargetCount = 1;
 
   if (taskType === 'DAILY') {
     const schedule: any = {};
@@ -22,8 +23,13 @@ function getTaskDataFromForm(formData: FormData) {
       schedule[i] = parseInt(formData.get(`dailyCount_${i}`) as string || '0');
     }
     habitDailySchedule = schedule;
-  } else if (taskType === 'WEEKLY' || taskType === 'MONTHLY') {
-    habitPeriodDays = parseInt(formData.get('habitPeriodDays') as string || '7');
+  } else if (taskType === 'SINGLE_DAY') {
+    habitTargetCount = parseInt(formData.get('habitTargetCount') as string || '1');
+  } else if (taskType === 'MULTI_DAY') {
+    habitStartDay = parseInt(formData.get('habitStartDay') as string || '0');
+    habitStartTime = formData.get('habitStartTime') as string;
+    habitEndDay = parseInt(formData.get('habitEndDay') as string || '0');
+    habitEndTime = formData.get('habitEndTime') as string;
     habitTargetCount = parseInt(formData.get('habitTargetCount') as string || '1');
   }
 
@@ -31,38 +37,52 @@ function getTaskDataFromForm(formData: FormData) {
     data: {
       taskTitle,
       taskMemo: taskMemo || "",
-      taskDeadline,
+      taskDeadline: deadlineStr ? new Date(deadlineStr) : null,
       taskPriority,
       taskType,
-      habitPeriodDays,
-      habitTargetCount,
       habitDailySchedule,
+      habitStartDay,
+      habitStartTime,
+      habitEndDay,
+      habitEndTime,
+      habitTargetCount,
     }
   };
 }
 
 export async function createTaskAction(formData: FormData) {
   const { data } = getTaskDataFromForm(formData);
-  await prisma.todoTask.create({ data });
+  // 新しいタスクは一番最後に配置します
+  const lastTask = await prisma.todoTask.findFirst({ orderBy: { sortOrder: 'desc' } });
+  const newOrder = lastTask ? lastTask.sortOrder + 1 : 0;
+  
+  await prisma.todoTask.create({ data: { ...data, sortOrder: newOrder } });
   revalidatePath('/');
 }
 
 export async function updateTaskAction(taskId: number, formData: FormData) {
   const { data } = getTaskDataFromForm(formData);
-  await prisma.todoTask.update({
-    where: { id: taskId },
-    data,
-  });
+  await prisma.todoTask.update({ where: { id: taskId }, data });
+  revalidatePath('/');
+}
+
+/**
+ * 並び順を一括で更新する
+ */
+export async function updateTaskOrderAction(taskIds: number[]) {
+  // 高速化のため並列で更新します
+  await Promise.all(
+    taskIds.map((id, index) => 
+      prisma.todoTask.update({ where: { id }, data: { sortOrder: index } })
+    )
+  );
   revalidatePath('/');
 }
 
 export async function completeTaskAction(taskId: number, currentCount: number) {
   await prisma.todoTask.update({
     where: { id: taskId },
-    data: { 
-      completedCount: currentCount + 1,
-      lastCompletedAt: new Date() 
-    },
+    data: { completedCount: currentCount + 1, lastCompletedAt: new Date() },
   });
   revalidatePath('/');
 }

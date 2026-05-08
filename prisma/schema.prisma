@@ -14,29 +14,31 @@ model TodoTask {
   taskTitle               String
   taskMemo                String?
   
-  // 開始時間・期限は任意（長期目標の期限のみ使用）
-  taskStartTime           DateTime?
+  // 一回きりのタスク用
   taskDeadline            DateTime?
   
   taskPriority            String   @default("MEDIUM")
-  taskType                String   
+  taskType                String   // DAILY, SINGLE_DAY, MULTI_DAY, SINGLE
   
-  habitPeriodDays         Int?     
-  habitTargetCount        Int?     @default(1)
+  // 毎日 (DAILY) 用：曜日ごとの回数
   habitDailySchedule      Json?    
 
+  // 複数日 (MULTI_DAY) 用
+  habitStartDay           Int?     // 0(日)-6(土)
+  habitStartTime          String?  // "HH:mm"
+  habitEndDay             Int?     // 0(日)-6(土)
+  habitEndTime            String?  // "HH:mm"
+  
+  // 一日 (SINGLE_DAY) と 複数日 (MULTI_DAY) 用の目標回数
+  habitTargetCount        Int?     @default(1)
+
+  // 進行状況
   completedCount          Int      @default(0)
   lastCompletedAt         DateTime?
 
-  notifications           TaskNotification[]
-  
+  // 並び順（新しく追加）
+  sortOrder               Int      @default(0)
+
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
-}
-
-model TaskNotification {
-  id                Int      @id @default(autoincrement())
-  notificationTime  DateTime
-  todoTask          TodoTask @relation(fields: [todoTaskId], references: [id], onDelete: Cascade)
-  todoTaskId        Int
 }
