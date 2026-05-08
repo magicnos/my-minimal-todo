@@ -3,7 +3,6 @@
 import { createTaskAction, updateTaskAction } from '@/app/actions';
 import { useState } from 'react';
 
-// 日時を <input type="datetime-local"> が読み取れる形式にする関数
 const formatDateTime = (date: Date) => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -16,12 +15,18 @@ const formatDateTime = (date: Date) => {
 export default function TaskCreateForm({ onComplete, editTaskData }: { onComplete: () => void; editTaskData?: any; }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [taskType, setTaskType] = useState(editTaskData?.taskType || "SINGLE");
-
+  
   const initialNotifications = editTaskData?.notifications?.map((n: any) => formatDateTime(new Date(n.notificationTime))) || [];
   const [notificationTimeList, setNotificationTimeList] = useState<string[]>(initialNotifications);
 
   const defaultStart = formatDateTime(new Date());
   const defaultEnd = formatDateTime(new Date(Date.now() + 24 * 60 * 60 * 1000));
+
+  // 曜日のリスト (0=日, 1=月...)
+  const daysOfWeek = [
+    { label: '日', value: '0' }, { label: '月', value: '1' }, { label: '火', value: '2' },
+    { label: '水', value: '3' }, { label: '木', value: '4' }, { label: '金', value: '5' }, { label: '土', value: '6' }
+  ];
 
   const handleFormSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -69,16 +74,6 @@ export default function TaskCreateForm({ onComplete, editTaskData }: { onComplet
               <option value="HABIT">習慣</option>
             </select>
           </div>
-          {taskType === 'HABIT' && (
-            <div style={halfInputStyle}>
-              <label style={labelStyle}>頻度</label>
-              <select name="habitFrequency" defaultValue={editTaskData?.habitFrequency || "DAILY"} style={inputStyle}>
-                <option value="DAILY">毎日</option>
-                <option value="WEEKLY">毎週</option>
-                <option value="MONTHLY">毎月</option>
-              </select>
-            </div>
-          )}
           <div style={halfInputStyle}>
             <label style={labelStyle}>優先度</label>
             <select name="taskPriority" defaultValue={editTaskData?.taskPriority || "MEDIUM"} style={inputStyle}>
@@ -88,6 +83,34 @@ export default function TaskCreateForm({ onComplete, editTaskData }: { onComplet
             </select>
           </div>
         </div>
+
+        {taskType === 'HABIT' && (
+          <div style={habitSectionStyle}>
+            <div style={{ marginBottom: '12px' }}>
+              <label style={labelStyle}>頻度と目標</label>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <select name="habitFrequency" defaultValue={editTaskData?.habitFrequency || "DAILY"} style={{ ...inputStyle, width: 'auto' }}>
+                  <option value="DAILY">毎日</option>
+                  <option value="WEEKLY">毎週</option>
+                  <option value="MONTHLY">毎月</option>
+                </select>
+                <input name="habitTargetCount" type="number" min="1" defaultValue={editTaskData?.habitTargetCount || 1} style={{ ...inputStyle, width: '60px' }} />
+                <span style={{ fontSize: '0.8rem' }}>回行う</span>
+              </div>
+            </div>
+            
+            <label style={labelStyle}>曜日指定（任意）</label>
+            <div style={daysRowStyle}>
+              {daysOfWeek.map(day => (
+                <label key={day.value} style={dayCheckStyle}>
+                  <input name="habitDays" type="checkbox" value={day.value} 
+                    defaultChecked={editTaskData?.habitDays?.split(',').includes(day.value)} />
+                  {day.label}
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div style={inputGroupStyle}>
           <label style={labelStyle}>メモ</label>
@@ -112,7 +135,7 @@ export default function TaskCreateForm({ onComplete, editTaskData }: { onComplet
 
         <div style={buttonContainerStyle}>
           <button type="button" onClick={onComplete} style={cancelButtonStyle}>キャンセル</button>
-          <button type="submit" disabled={isSubmitting} style={submitButtonStyle}>{isSubmitting ? '保存中...' : '保存する'}</button>
+          <button type="submit" disabled={isSubmitting} style={submitButtonStyle}>保存する</button>
         </div>
       </form>
     </div>
@@ -128,6 +151,9 @@ const inputStyle: React.CSSProperties = { width: '100%', padding: '12px', border
 const textareaStyle: React.CSSProperties = { width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #333', backgroundColor: '#0a0a0a', color: '#fff', fontSize: '1rem', minHeight: '60px', resize: 'none' };
 const rowStyle: React.CSSProperties = { display: 'flex', gap: '12px', marginBottom: '16px' };
 const halfInputStyle: React.CSSProperties = { flex: 1 };
+const habitSectionStyle: React.CSSProperties = { padding: '16px', backgroundColor: '#222', borderRadius: '12px', marginBottom: '16px' };
+const daysRowStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', marginTop: '8px' };
+const dayCheckStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', alignItems: 'center', fontSize: '0.75rem', gap: '4px' };
 const notificationSectionStyle: React.CSSProperties = { padding: '16px', backgroundColor: '#222', borderRadius: '12px', marginBottom: '20px' };
 const addSmallButtonStyle: React.CSSProperties = { padding: '8px 12px', borderRadius: '6px', border: '1px dashed #555', backgroundColor: 'transparent', color: '#aaa', fontSize: '0.8rem', cursor: 'pointer', width: '100%' };
 const deleteSmallButtonStyle: React.CSSProperties = { width: '40px', backgroundColor: '#333', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' };

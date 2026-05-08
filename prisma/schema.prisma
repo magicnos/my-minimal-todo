@@ -20,10 +20,11 @@ model TodoTask {
   taskPriority            String   @default("MEDIUM")
   taskType                String   @default("SINGLE") // SINGLE or HABIT
   
-  // 習慣の頻度（DAILY: 毎日, WEEKLY: 毎週, MONTHLY: 毎月）
-  habitFrequency          String?  @default("DAILY")
+  // --- 習慣設定の拡張 ---
+  habitFrequency          String?  @default("DAILY") // DAILY, WEEKLY, MONTHLY
+  habitDays               String?  // "0,1,2,3,4,5,6" (0=日曜日) 曜日指定用
+  habitTargetCount        Int?     @default(1)       // 期間内に何回行うか
   
-  // 最後に完了ボタンを押した日時（習慣用）
   lastCompletedAt         DateTime?
 
   notifications           TaskNotification[]
