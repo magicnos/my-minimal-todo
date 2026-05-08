@@ -36,9 +36,20 @@ model TodoTask {
   completedCount          Int      @default(0)
   lastCompletedAt         DateTime?
 
-  // 並び順（新しく追加）
+  // 並び順
   sortOrder               Int      @default(0)
+
+  // 通知設定（復活）
+  notifications           TaskNotification[]
 
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
+}
+
+// 通知時間のリスト（復活）
+model TaskNotification {
+  id                Int      @id @default(autoincrement())
+  notificationTime  DateTime
+  todoTask          TodoTask @relation(fields: [todoTaskId], references: [id], onDelete: Cascade)
+  todoTaskId        Int
 }
