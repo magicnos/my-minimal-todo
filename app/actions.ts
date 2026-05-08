@@ -4,69 +4,89 @@ import { revalidatePath } from 'next/cache';
 import prisma from '@/lib/prisma';
 
 /**
- * 文字列（YYYY-MM-DDTHH:mm）を現地の Date オブジェクトに正しく変換する
+ * フォームデータから共通のタスク情報を取り出す
  */
-function parseLocalDateTime(dateTimeStr: string): Date {
-  return new Date(dateTimeStr);
-}
-
 function getTaskDataFromForm(formData: FormData) {
   const taskTitle = formData.get('taskTitle') as string;
   const taskMemo = formData.get('taskMemo') as string;
-  const taskStartTimeStr = formData.get('taskStartTime') as string;
-  const taskDeadlineStr = formData.get('taskDeadline') as string;
-  const taskPriority = formData.get('taskPriority') as string;
   const taskType = formData.get('taskType') as string;
+  const taskPriority = formData.get('taskPriority') as string;
   
-  // 習慣の詳細設定
-  const habitFrequency = formData.get('habitFrequency') as string;
-  const habitDays = formData.getAll('habitDays').join(','); // 曜日の配列を文字列へ
-  const habitTargetCount = parseInt(formData.get('habitTargetCount') as string || '1');
+  // 日付の文字列を Date オブジェクトに変換（クライアントから ISO 形式で来る想定）
+  const startTimeStr = formData.get('taskStartTime') as string;
+  const deadlineStr = formData.get('taskDeadline') as string;
+  
+  const taskStartTime = startTimeStr ? new Date(startTimeStr) : null;
+  const taskDeadline = new Date(deadlineStr);
+
+  // 習慣設定
+  let habitPeriodDays = null;
+  let habitTargetCount = 1;
+  let habitDailySchedule = null;
+
+  if (taskType === 'DAILY') {
+    // 毎日：曜日ごとの回数を取得
+    const schedule: any = {};
+    for (let i = 0; i < 7; i++) {
+      schedule[i] = parseInt(formData.get(`dailyCount_${i}`) as string || '0');
+    }
+    habitDailySchedule = schedule;
+  } else if (taskType === 'WEEKLY' || taskType === 'MONTHLY') {
+    // 毎週/毎月：期間日数と合計回数
+    habitPeriodDays = parseInt(formData.get('habitPeriodDays') as string || '7');
+    habitTargetCount = parseInt(formData.get('habitTargetCount') as string || '1');
+  }
 
   const notificationTimes = formData.getAll('notificationTimes') as string[];
 
   return {
-    baseData: {
+    data: {
       taskTitle,
       taskMemo: taskMemo || "",
-      taskStartTime: parseLocalDateTime(taskStartTimeStr),
-      taskDeadline: parseLocalDateTime(taskDeadlineStr),
+      taskStartTime,
+      taskDeadline,
       taskPriority,
       taskType,
-      habitFrequency: taskType === 'HABIT' ? habitFrequency : null,
-      habitDays: taskType === 'HABIT' ? habitDays : null,
-      habitTargetCount: taskType === 'HABIT' ? habitTargetCount : 1,
+      habitPeriodDays,
+      habitTargetCount,
+      habitDailySchedule,
     },
     notifications: notificationTimes
       .filter(t => t !== "")
-      .map(t => ({ notificationTime: parseLocalDateTime(t) })),
+      .map(t => ({ notificationTime: new Date(t) })),
   };
 }
 
 export async function createTaskAction(formData: FormData) {
-  const { baseData, notifications } = getTaskDataFromForm(formData);
+  const { data, notifications } = getTaskDataFromForm(formData);
   await prisma.todoTask.create({
-    data: { ...baseData, notifications: { create: notifications } },
+    data: { ...data, notifications: { create: notifications } },
   });
   revalidatePath('/');
 }
 
 export async function updateTaskAction(taskId: number, formData: FormData) {
-  const { baseData, notifications } = getTaskDataFromForm(formData);
+  const { data, notifications } = getTaskDataFromForm(formData);
   await prisma.todoTask.update({
     where: { id: taskId },
     data: {
-      ...baseData,
+      ...data,
       notifications: { deleteMany: {}, create: notifications },
     },
   });
   revalidatePath('/');
 }
 
-export async function completeHabitAction(taskId: number) {
+/**
+ * タスクの完了（習慣の場合はカウントアップ）
+ */
+export async function completeTaskAction(taskId: number, currentCount: number) {
   await prisma.todoTask.update({
     where: { id: taskId },
-    data: { lastCompletedAt: new Date() },
+    data: { 
+      completedCount: currentCount + 1,
+      lastCompletedAt: new Date() 
+    },
   });
   revalidatePath('/');
 }

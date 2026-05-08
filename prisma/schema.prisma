@@ -14,18 +14,29 @@ model TodoTask {
   taskTitle               String
   taskMemo                String?
   
-  taskStartTime           DateTime @default(now())
+  // 開始時間（長期目標の場合は null になります）
+  taskStartTime           DateTime?
+  
+  // 期限（締め切り）
   taskDeadline            DateTime
   
   taskPriority            String   @default("MEDIUM")
-  taskType                String   @default("SINGLE") // SINGLE or HABIT
   
-  // --- 習慣設定の拡張 ---
-  habitFrequency          String?  @default("DAILY") // DAILY, WEEKLY, MONTHLY
-  habitDays               String?  // "0,1,2,3,4,5,6" (0=日曜日) 曜日指定用
-  habitTargetCount        Int?     @default(1)       // 期間内に何回行うか
+  // タスクのタイプ（DAILY, WEEKLY, MONTHLY, LONG_TERM）
+  taskType                String   
   
-  lastCompletedAt         DateTime?
+  // 習慣設定：期間（日単位。毎週/毎月で使用）
+  habitPeriodDays         Int?     
+  
+  // 習慣設定：期間内の目標回数（毎週/毎月で使用）
+  habitTargetCount        Int?     @default(1)
+  
+  // 習慣設定：曜日ごとの回数（DAILYで使用。JSON形式で {"0":1, "1":2...} のように保存）
+  habitDailySchedule      Json?    
+
+  // 実行状態の管理
+  completedCount          Int      @default(0) // 現在の期間内で何回完了したか
+  lastCompletedAt         DateTime?            // 最後に完了ボタンを押した日時
 
   notifications           TaskNotification[]
   
