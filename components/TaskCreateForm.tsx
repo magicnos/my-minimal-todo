@@ -25,13 +25,15 @@ export default function TaskCreateForm({ onComplete, editTaskData }: { onComplet
     setIsSubmitting(true);
     
     const rawFormData = new FormData(event.currentTarget);
-    
-    // 時刻のズレを修正するために、ブラウザの現地時間を ISO 文字列に変換してから送り直します
-    const startTimeRaw = rawFormData.get('taskStartTime') as string;
     const deadlineRaw = rawFormData.get('taskDeadline') as string;
     
-    if (startTimeRaw) rawFormData.set('taskStartTime', new Date(startTimeRaw).toISOString());
-    if (deadlineRaw) rawFormData.set('taskDeadline', new Date(deadlineRaw).toISOString());
+    // 一回きりの場合のみ締め切りをセット
+    if (taskType === 'SINGLE' && deadlineRaw) {
+      rawFormData.set('taskDeadline', new Date(deadlineRaw).toISOString());
+    } else {
+      rawFormData.delete('taskDeadline');
+    }
+    rawFormData.delete('taskStartTime');
 
     try {
       if (editTaskData) { await updateTaskAction(editTaskData.id, rawFormData); }
@@ -49,17 +51,15 @@ export default function TaskCreateForm({ onComplete, editTaskData }: { onComplet
       <form onSubmit={handleFormSubmit} style={formCardStyle}>
         <h2 style={formTitleStyle}>{editTaskData ? 'タスクを編集' : '新しいタスク'}</h2>
 
-        {/* 共通項目：タイトル */}
         <div style={inputGroupStyle}>
           <label style={labelStyle}>タイトル</label>
           <input name="taskTitle" type="text" required defaultValue={editTaskData?.taskTitle} style={inputStyle} />
         </div>
 
-        {/* タイプ選択 */}
         <div style={inputGroupStyle}>
           <label style={labelStyle}>タスクのタイプ</label>
           <div style={typeTabContainerStyle}>
-            {['DAILY', 'WEEKLY', 'MONTHLY', 'LONG_TERM'].map(type => (
+            {['DAILY', 'WEEKLY', 'MONTHLY', 'SINGLE'].map(type => (
               <button key={type} type="button" 
                 onClick={() => setTaskType(type)}
                 style={{
@@ -68,14 +68,13 @@ export default function TaskCreateForm({ onComplete, editTaskData }: { onComplet
                   color: taskType === type ? '#0a0a0a' : '#fff',
                 }}
               >
-                {type === 'DAILY' ? '毎日' : type === 'WEEKLY' ? '毎週' : type === 'MONTHLY' ? '毎月' : '長期'}
+                {type === 'DAILY' ? '毎日' : type === 'WEEKLY' ? '毎週' : type === 'MONTHLY' ? '毎月' : '一回'}
               </button>
             ))}
             <input type="hidden" name="taskType" value={taskType} />
           </div>
         </div>
 
-        {/* 各タイプごとの詳細設定 */}
         <div style={detailSectionStyle}>
           {taskType === 'DAILY' && (
             <div>
@@ -89,61 +88,40 @@ export default function TaskCreateForm({ onComplete, editTaskData }: { onComplet
                   </div>
                 ))}
               </div>
-              <div style={rowStyle}>
-                <div style={halfInputStyle}>
-                  <label style={labelStyle}>開始時間</label>
-                  <input name="taskStartTime" type="datetime-local" required defaultValue={formatToLocalString(editTaskData?.taskStartTime) || formatToLocalString(new Date())} style={inputStyle} />
-                </div>
-                <div style={halfInputStyle}>
-                  <label style={labelStyle}>期限（当日内）</label>
-                  <input name="taskDeadline" type="datetime-local" required defaultValue={formatToLocalString(editTaskData?.taskDeadline) || formatToLocalString(new Date(Date.now() + 86400000))} style={inputStyle} />
-                </div>
-              </div>
             </div>
           )}
 
           {(taskType === 'WEEKLY' || taskType === 'MONTHLY') && (
-            <div>
-              <div style={rowStyle}>
-                <div style={halfInputStyle}>
-                  <label style={labelStyle}>期間（日数）</label>
-                  <input name="habitPeriodDays" type="number" min={taskType === 'WEEKLY' ? 2 : 8} max={taskType === 'WEEKLY' ? 7 : 31}
-                    defaultValue={editTaskData?.habitPeriodDays || (taskType === 'WEEKLY' ? 7 : 30)} style={inputStyle} />
-                </div>
-                <div style={halfInputStyle}>
-                  <label style={labelStyle}>目標回数</label>
-                  <input name="habitTargetCount" type="number" min="1" defaultValue={editTaskData?.habitTargetCount || 1} style={inputStyle} />
-                </div>
+            <div style={rowStyle}>
+              <div style={halfInputStyle}>
+                <label style={labelStyle}>期間（日数）</label>
+                <input name="habitPeriodDays" type="number" min="1" 
+                  defaultValue={editTaskData?.habitPeriodDays || (taskType === 'WEEKLY' ? 7 : 30)} style={inputStyle} />
               </div>
-              <div style={rowStyle}>
-                <div style={halfInputStyle}>
-                  <label style={labelStyle}>開始時間</label>
-                  <input name="taskStartTime" type="datetime-local" required defaultValue={formatToLocalString(editTaskData?.taskStartTime) || formatToLocalString(new Date())} style={inputStyle} />
-                </div>
-                <div style={halfInputStyle}>
-                  <label style={labelStyle}>期限</label>
-                  <input name="taskDeadline" type="datetime-local" required defaultValue={formatToLocalString(editTaskData?.taskDeadline) || formatToLocalString(new Date(Date.now() + 604800000))} style={inputStyle} />
-                </div>
+              <div style={halfInputStyle}>
+                <label style={labelStyle}>目標回数</label>
+                <input name="habitTargetCount" type="number" min="1" defaultValue={editTaskData?.habitTargetCount || 1} style={inputStyle} />
               </div>
             </div>
           )}
 
-          {taskType === 'LONG_TERM' && (
+          {taskType === 'SINGLE' && (
             <div>
-              <label style={labelStyle}>締め切り日時</label>
-              <input name="taskDeadline" type="datetime-local" required defaultValue={formatToLocalString(editTaskData?.taskDeadline) || formatToLocalString(new Date(Date.now() + 2592000000))} style={inputStyle} />
-              <p style={helpTextStyle}>長期目標には開始時間と回数設定はありません。</p>
+              <label style={labelStyle}>期限（締め切り）</label>
+              <input name="taskDeadline" type="datetime-local" required defaultValue={formatToLocalString(editTaskData?.taskDeadline) || formatToLocalString(new Date(Date.now() + 86400000))} style={inputStyle} />
             </div>
           )}
         </div>
 
-        <div style={inputGroupStyle}>
-          <label style={labelStyle}>優先度</label>
-          <select name="taskPriority" defaultValue={editTaskData?.taskPriority || "MEDIUM"} style={inputStyle}>
-            <option value="LOW">低</option>
-            <option value="MEDIUM">中</option>
-            <option value="HIGH">高</option>
-          </select>
+        <div style={rowStyle}>
+          <div style={halfInputStyle}>
+            <label style={labelStyle}>優先度</label>
+            <select name="taskPriority" defaultValue={editTaskData?.taskPriority || "MEDIUM"} style={inputStyle}>
+              <option value="LOW">低</option>
+              <option value="MEDIUM">中</option>
+              <option value="HIGH">高</option>
+            </select>
+          </div>
         </div>
 
         <div style={inputGroupStyle}>
@@ -160,7 +138,6 @@ export default function TaskCreateForm({ onComplete, editTaskData }: { onComplet
   );
 }
 
-// --- デザイン ---
 const overlayStyle: React.CSSProperties = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'flex-end', zIndex: 1000 };
 const formCardStyle: React.CSSProperties = { backgroundColor: '#171717', width: '100%', maxWidth: '550px', padding: '24px', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', maxHeight: '95vh', overflowY: 'auto' };
 const formTitleStyle: React.CSSProperties = { marginBottom: '20px', fontSize: '1.2rem', fontWeight: 'bold' };

@@ -14,50 +14,46 @@ export default function TodoClientContent({ initialTasks }: { initialTasks: any[
     return () => clearInterval(timer);
   }, []);
 
-  /**
-   * そのタスクが現在のサイクルで「完了」しているか判定する
-   */
   const getTaskStatus = (task: any) => {
-    // 長期目標は完了＝削除なので、ここには来ない想定
-    if (task.taskType === 'LONG_TERM') return { isDone: false, target: 1 };
+    if (task.taskType === 'SINGLE') return { isDone: false, target: 1, current: 0 };
 
     let target = task.habitTargetCount || 1;
-    const currentDay = currentTime.getDay();
+    let effectiveCount = task.completedCount;
 
+    const lastDone = task.lastCompletedAt ? new Date(task.lastCompletedAt) : null;
+    
     if (task.taskType === 'DAILY') {
+      const currentDay = currentTime.getDay();
       target = task.habitDailySchedule?.[currentDay] || 0;
+      if (lastDone && lastDone.toDateString() !== currentTime.toDateString()) {
+        effectiveCount = 0;
+      }
+    } else {
+      const createdAt = new Date(task.createdAt);
+      const periodMs = (task.habitPeriodDays || 7) * 86400000;
+      const currentCycleStartMs = createdAt.getTime() + Math.floor((currentTime.getTime() - createdAt.getTime()) / periodMs) * periodMs;
+      if (lastDone && lastDone.getTime() < currentCycleStartMs) {
+        effectiveCount = 0;
+      }
     }
 
-    // 目標回数が0の場合は、その日はお休み
-    if (target === 0) return { isDone: true, target: 0 };
-
-    // 最後に完了したのが「今回の開始時間」より前なら、カウントをリセットして表示すべき
-    // (サーバー側でのリセットも必要ですが、フロントでも判定します)
-    const isResetNeeded = task.taskStartTime && new Date(task.taskStartTime) > new Date(task.lastCompletedAt || 0);
-    const effectiveCount = isResetNeeded ? 0 : task.completedCount;
-
-    return {
-      isDone: effectiveCount >= target,
-      target: target,
-      current: effectiveCount
-    };
+    if (target === 0) return { isDone: true, target: 0, current: 0 };
+    return { isDone: effectiveCount >= target, target, current: effectiveCount };
   };
 
   const renderTaskCard = (task: any) => {
     const { isDone, target, current } = getTaskStatus(task);
-    const isUpcoming = task.taskStartTime && new Date(task.taskStartTime) > currentTime;
 
     return (
       <div key={task.id} style={{
         ...taskCardStyle,
-        opacity: isDone ? 0.2 : (isUpcoming ? 0.4 : 1),
-        filter: (isUpcoming || isDone) ? 'grayscale(0.5)' : 'none',
+        opacity: isDone ? 0.2 : 1,
+        filter: isDone ? 'grayscale(0.5)' : 'none',
       }}>
         <div style={taskContentStyle} onClick={() => { setEditingTask(task); setIsFormVisible(true); }}>
           <div style={taskHeaderStyle}>
             <span style={getPriorityBadgeStyle(task.taskPriority)}>{task.taskPriority}</span>
             {isDone && target > 0 && <span style={doneBadgeStyle}>✅ 完了</span>}
-            {!isDone && isUpcoming && <span style={upcomingBadgeStyle}>⏳ 待機中</span>}
             {target === 0 && <span style={upcomingBadgeStyle}>☕ お休み</span>}
           </div>
           
@@ -65,27 +61,28 @@ export default function TodoClientContent({ initialTasks }: { initialTasks: any[
           {task.taskMemo && <p style={taskMemoStyle}>{task.taskMemo}</p>}
           
           <div style={timeInfoStyle}>
-            {task.taskStartTime && (
+            {task.taskType === 'SINGLE' ? (
               <div style={timeRowStyle}>
-                <span style={timeLabelStyle}>始:</span>
-                <span>{new Date(task.taskStartTime).toLocaleString('ja-JP', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                <span style={timeLabelStyle}>〆:</span>
+                <span>{new Date(task.taskDeadline).toLocaleString('ja-JP', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+              </div>
+            ) : (
+              <div style={timeRowStyle}>
+                <span style={timeLabelStyle}>🔄</span>
+                <span>{task.taskType === 'DAILY' ? '毎日' : `${task.habitPeriodDays}日ごと`}</span>
               </div>
             )}
-            <div style={timeRowStyle}>
-              <span style={timeLabelStyle}>〆:</span>
-              <span>{new Date(task.taskDeadline).toLocaleString('ja-JP', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
-            </div>
           </div>
 
-          {task.taskType !== 'LONG_TERM' && target > 0 && (
-            <div style={progressStyle}>進捗: {current ?? task.completedCount} / {target}</div>
+          {task.taskType !== 'SINGLE' && target > 0 && (
+            <div style={progressStyle}>進捗: {current} / {target}</div>
           )}
         </div>
         
         <button 
-          onClick={() => task.taskType === 'LONG_TERM' ? (confirm('完了として削除しますか？') && deleteTaskAction(task.id)) : completeTaskAction(task.id, current ?? task.completedCount)} 
-          disabled={isDone || isUpcoming}
-          style={{...completeButtonStyle, cursor: (isDone || isUpcoming) ? 'not-allowed' : 'pointer', opacity: (isDone || isUpcoming) ? 0.3 : 1}}
+          onClick={() => task.taskType === 'SINGLE' ? (confirm('完了として削除しますか？') && deleteTaskAction(task.id)) : completeTaskAction(task.id, current)} 
+          disabled={isDone}
+          style={{...completeButtonStyle, cursor: isDone ? 'not-allowed' : 'pointer', opacity: isDone ? 0.3 : 1}}
         >
           {isDone ? '●' : '✓'}
         </button>
@@ -93,20 +90,20 @@ export default function TodoClientContent({ initialTasks }: { initialTasks: any[
     );
   };
 
-  const habits = initialTasks.filter(t => t.taskType !== 'LONG_TERM');
-  const longTerms = initialTasks.filter(t => t.taskType === 'LONG_TERM');
+  const habits = initialTasks.filter(t => t.taskType !== 'SINGLE');
+  const singles = initialTasks.filter(t => t.taskType === 'SINGLE');
 
   return (
     <>
       <div style={columnsContainerStyle}>
         <section style={columnStyle}>
-          <h2 style={sectionTitleStyle}>🔄 習慣タスク (毎日・毎週・毎月)</h2>
+          <h2 style={sectionTitleStyle}>🔄 習慣</h2>
           <div style={listStyle}>{habits.map(renderTaskCard)}</div>
         </section>
 
         <section style={columnStyle}>
-          <h2 style={sectionTitleStyle}>🎯 長期目標・締め切り</h2>
-          <div style={listStyle}>{longTerms.map(renderTaskCard)}</div>
+          <h2 style={sectionTitleStyle}>📍 一回きり</h2>
+          <div style={listStyle}>{singles.map(renderTaskCard)}</div>
         </section>
       </div>
 
@@ -117,7 +114,7 @@ export default function TodoClientContent({ initialTasks }: { initialTasks: any[
   );
 }
 
-// --- デザイン ---
+// --- スタイル (一部抜粋) ---
 const columnsContainerStyle: React.CSSProperties = { display: 'flex', gap: '24px', flexWrap: 'wrap' };
 const columnStyle: React.CSSProperties = { flex: '1', minWidth: '320px' };
 const sectionTitleStyle: React.CSSProperties = { fontSize: '0.9rem', opacity: 0.5, marginBottom: '16px', fontWeight: 'bold', borderLeft: '3px solid #ededed', paddingLeft: '8px' };
@@ -129,7 +126,7 @@ const taskTitleStyle: React.CSSProperties = { fontSize: '1.1rem', fontWeight: '6
 const taskMemoStyle: React.CSSProperties = { fontSize: '0.85rem', opacity: 0.7, marginBottom: '12px', whiteSpace: 'pre-wrap' };
 const timeInfoStyle: React.CSSProperties = { fontSize: '0.75rem', opacity: 0.6, display: 'flex', flexDirection: 'column', gap: '4px' };
 const timeRowStyle: React.CSSProperties = { display: 'flex', gap: '8px' };
-const timeLabelStyle: React.CSSProperties = { opacity: 0.6, width: '24px' };
+const timeLabelStyle: React.CSSProperties = { opacity: 0.6 };
 const progressStyle: React.CSSProperties = { marginTop: '8px', fontSize: '0.75rem', color: '#4dff4d', fontWeight: 'bold' };
 const doneBadgeStyle: React.CSSProperties = { fontSize: '0.65rem', color: '#4dff4d', backgroundColor: 'rgba(77, 255, 77, 0.1)', padding: '2px 6px', borderRadius: '4px' };
 const upcomingBadgeStyle: React.CSSProperties = { fontSize: '0.65rem', color: '#aaa', backgroundColor: '#333', padding: '2px 6px', borderRadius: '4px' };
