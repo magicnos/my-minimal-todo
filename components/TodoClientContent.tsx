@@ -2,134 +2,134 @@
 
 import { useState, useEffect } from 'react';
 import TaskCreateForm from './TaskCreateForm';
-import { deleteTaskAction } from '@/app/actions';
+import { deleteTaskAction, completeHabitAction } from '@/app/actions';
 
-/**
- * メイン画面の動的な表示・操作を担当するコンポーネント
- */
 export default function TodoClientContent({ initialTasks }: { initialTasks: any[] }) {
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [editingTask, setEditingTask] = useState<any | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [sortBy, setSortBy] = useState('deadline'); // deadline, priority, startTime
 
-  // 現在時刻を1分ごとに更新して、開始時間の判定をリアルタイムに近づけます
   useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 60000);
+    const timer = setInterval(() => setCurrentTime(new Date()), 30000);
     return () => clearInterval(timer);
   }, []);
 
-  const handleEditButtonClick = (task: any) => {
-    setEditingTask(task);
-    setIsFormVisible(true);
+  /**
+   * タスクの並び替えロジック
+   */
+  const sortTasks = (tasks: any[]) => {
+    return [...tasks].sort((a, b) => {
+      if (sortBy === 'priority') {
+        const pMap: any = { HIGH: 3, MEDIUM: 2, LOW: 1 };
+        return pMap[b.taskPriority] - pMap[a.taskPriority];
+      }
+      if (sortBy === 'startTime') {
+        return new Date(a.taskStartTime).getTime() - new Date(b.taskStartTime).getTime();
+      }
+      return new Date(a.taskDeadline).getTime() - new Date(b.taskDeadline).getTime();
+    });
   };
 
-  const handleCompleteButtonClick = async (taskId: number) => {
-    if (confirm('このタスクを完了して削除しますか？')) {
-      await deleteTaskAction(taskId);
+  /**
+   * 習慣タスクが「現在のサイクルで完了済みか」を判定する
+   * 指示：開始時間が来たら再度復活する（＝完了日が現在の開始時間より前なら復活）
+   */
+  const isHabitFinishedForNow = (task: any) => {
+    if (task.taskType !== 'HABIT' || !task.lastCompletedAt) return false;
+    const lastDone = new Date(task.lastCompletedAt);
+    const startTime = new Date(task.taskStartTime);
+    // 最後に完了したのが、現在の開始時間よりも後であれば「完了済み」とみなす
+    return lastDone >= startTime;
+  };
+
+  const handleCompleteClick = async (task: any) => {
+    if (task.taskType === 'HABIT') {
+      await completeHabitAction(task.id);
+    } else {
+      if (confirm('完了して削除しますか？')) {
+        await deleteTaskAction(task.id);
+      }
     }
   };
 
-  const handleFormClose = () => {
-    setIsFormVisible(false);
-    setEditingTask(null);
-  };
-
-  // タスクを「一回きり」と「習慣」に分けます
-  const singleTasks = initialTasks.filter(t => t.taskType === 'SINGLE');
-  const habitTasks = initialTasks.filter(t => t.taskType === 'HABIT');
-
-  /**
-   * 個別のタスクカードを描画する関数
-   */
   const renderTaskCard = (task: any) => {
-    // まだ開始時間に達していないか判定
     const isUpcoming = new Date(task.taskStartTime) > currentTime;
+    const isDoneHabit = isHabitFinishedForNow(task);
 
     return (
       <div key={task.id} style={{
         ...taskCardStyle,
-        opacity: isUpcoming ? 0.4 : 1, // 未開始なら薄くする
-        filter: isUpcoming ? 'grayscale(0.5)' : 'none', // 少し色を落とす
+        opacity: isDoneHabit ? 0.2 : (isUpcoming ? 0.5 : 1),
+        filter: (isUpcoming || isDoneHabit) ? 'grayscale(0.5)' : 'none',
       }}>
-        <div style={taskContentStyle} onClick={() => handleEditButtonClick(task)}>
+        <div style={taskContentStyle} onClick={() => { setEditingTask(task); setIsFormVisible(true); }}>
           <div style={taskHeaderStyle}>
-            <span style={getPriorityBadgeStyle(task.taskPriority)}>
-              {task.taskPriority === 'HIGH' ? '高' : task.taskPriority === 'MEDIUM' ? '中' : '低'}
-            </span>
-            {isUpcoming && <span style={upcomingLabelStyle}>⏳ 開始前</span>}
+            <span style={getPriorityBadgeStyle(task.taskPriority)}>{task.taskPriority}</span>
+            {isDoneHabit && <span style={doneBadgeStyle}>✅ 完了済み</span>}
+            {!isDoneHabit && isUpcoming && <span style={upcomingBadgeStyle}>⏳ 待機中</span>}
           </div>
-          
           <h3 style={taskTitleStyle}>{task.taskTitle}</h3>
-          {task.taskMemo && <p style={taskMemoStyle}>{task.taskMemo}</p>}
-          
           <div style={timeInfoStyle}>
-            <span>始: {new Date(task.taskStartTime).toLocaleString('ja-JP', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
-            <span style={{ margin: '0 8px' }}>→</span>
-            <span>終: {new Date(task.taskDeadline).toLocaleString('ja-JP', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+            {new Date(task.taskDeadline).toLocaleString('ja-JP', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })} 〆
           </div>
-
-          {task.notifications?.length > 0 && (
-            <div style={notificationBadgeListStyle}>
-              {task.notifications.map((n: any, i: number) => (
-                <span key={i} style={notificationBadgeStyle}>🔔</span>
-              ))}
-            </div>
-          )}
         </div>
-        
-        <button onClick={() => handleCompleteButtonClick(task.id)} style={completeButtonStyle}>✓</button>
+        <button 
+          onClick={() => handleCompleteClick(task)} 
+          disabled={isDoneHabit}
+          style={{...completeButtonStyle, cursor: isDoneHabit ? 'not-allowed' : 'pointer', opacity: isDoneHabit ? 0.3 : 1}}
+        >
+          {isDoneHabit ? '●' : '✓'}
+        </button>
       </div>
     );
   };
 
+  const sortedHabits = sortTasks(initialTasks.filter(t => t.taskType === 'HABIT'));
+  const sortedSingles = sortTasks(initialTasks.filter(t => t.taskType === 'SINGLE'));
+
   return (
     <>
-      {/* 習慣タスクのセクション */}
-      {habitTasks.length > 0 && (
-        <section style={sectionStyle}>
-          <h2 style={sectionTitleStyle}>🔄 習慣タスク</h2>
-          <div style={taskListContainerStyle}>
-            {habitTasks.map(renderTaskCard)}
-          </div>
+      <div style={toolbarStyle}>
+        <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} style={sortSelectStyle}>
+          <option value="deadline">期限が近い順</option>
+          <option value="priority">優先度が高い順</option>
+          <option value="startTime">開始が早い順</option>
+        </select>
+      </div>
+
+      <div style={columnsContainerStyle}>
+        <section style={columnStyle}>
+          <h2 style={sectionTitleStyle}>🔄 習慣</h2>
+          <div style={listStyle}>{sortedHabits.map(renderTaskCard)}</div>
         </section>
-      )}
 
-      {/* 一回きりタスクのセクション */}
-      <section style={sectionStyle}>
-        <h2 style={sectionTitleStyle}>📍 一回きりのタスク</h2>
-        <div style={taskListContainerStyle}>
-          {singleTasks.length === 0 ? (
-            <p style={emptyMessageStyle}>タスクがありません。</p>
-          ) : (
-            singleTasks.map(renderTaskCard)
-          )}
-        </div>
-      </section>
+        <section style={columnStyle}>
+          <h2 style={sectionTitleStyle}>📍 一回</h2>
+          <div style={listStyle}>{sortedSingles.map(renderTaskCard)}</div>
+        </section>
+      </div>
 
-      <button onClick={() => setIsFormVisible(true)} style={floatingAddButtonStyle}>+</button>
+      <button onClick={() => { setEditingTask(null); setIsFormVisible(true); }} style={floatingAddButtonStyle}>+</button>
 
-      {isFormVisible && (
-        <TaskCreateForm onComplete={handleFormClose} editTaskData={editingTask} />
-      )}
+      {isFormVisible && <TaskCreateForm onComplete={() => { setIsFormVisible(false); setEditingTask(null); }} editTaskData={editingTask} />}
     </>
   );
 }
 
-// --- スタイル ---
-const sectionStyle: React.CSSProperties = { marginBottom: '32px' };
-const sectionTitleStyle: React.CSSProperties = { fontSize: '1rem', opacity: 0.6, marginBottom: '16px', marginLeft: '4px', fontWeight: 'bold', letterSpacing: '0.05em' };
-const taskListContainerStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '12px' };
-const emptyMessageStyle: React.CSSProperties = { textAlign: 'center', marginTop: '20px', opacity: 0.4, fontSize: '0.9rem' };
-
-const taskCardStyle: React.CSSProperties = { padding: '16px', borderRadius: '16px', backgroundColor: '#171717', border: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center', transition: 'all 0.3s ease' };
+const toolbarStyle: React.CSSProperties = { marginBottom: '20px', display: 'flex', justifyContent: 'flex-end' };
+const sortSelectStyle: React.CSSProperties = { padding: '8px', borderRadius: '8px', backgroundColor: '#171717', color: '#fff', border: '1px solid #333' };
+const columnsContainerStyle: React.CSSProperties = { display: 'flex', gap: '20px', flexWrap: 'wrap' };
+const columnStyle: React.CSSProperties = { flex: '1', minWidth: '300px' };
+const sectionTitleStyle: React.CSSProperties = { fontSize: '0.9rem', opacity: 0.5, marginBottom: '12px', fontWeight: 'bold' };
+const listStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '10px' };
+const taskCardStyle: React.CSSProperties = { padding: '12px 16px', borderRadius: '12px', backgroundColor: '#171717', border: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center' };
 const taskContentStyle: React.CSSProperties = { flex: 1, cursor: 'pointer' };
-const taskHeaderStyle: React.CSSProperties = { display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' };
-const upcomingLabelStyle: React.CSSProperties = { fontSize: '0.65rem', color: '#aaa', backgroundColor: '#333', padding: '2px 6px', borderRadius: '4px' };
-const taskTitleStyle: React.CSSProperties = { fontSize: '1.1rem', fontWeight: '600', marginBottom: '4px' };
-const taskMemoStyle: React.CSSProperties = { fontSize: '0.85rem', opacity: 0.7, marginBottom: '8px' };
-const timeInfoStyle: React.CSSProperties = { fontSize: '0.75rem', opacity: 0.5, display: 'flex', alignItems: 'center' };
-const notificationBadgeListStyle: React.CSSProperties = { marginTop: '8px', display: 'flex', gap: '4px' };
-const notificationBadgeStyle: React.CSSProperties = { fontSize: '0.7rem', opacity: 0.8 };
-const getPriorityBadgeStyle = (priority: string): React.CSSProperties => ({ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '4px', fontWeight: 'bold', backgroundColor: priority === 'HIGH' ? '#ff4d4d' : priority === 'MEDIUM' ? '#ffa500' : '#4dff4d', color: '#000' });
-const completeButtonStyle: React.CSSProperties = { width: '44px', height: '44px', borderRadius: '22px', border: '2px solid #333', backgroundColor: 'transparent', color: '#4dff4d', fontSize: '1.2rem', cursor: 'pointer', marginLeft: '12px', flexShrink: 0 };
-const floatingAddButtonStyle: React.CSSProperties = { position: 'fixed', bottom: '30px', right: '30px', width: '64px', height: '64px', borderRadius: '32px', backgroundColor: '#ededed', color: '#0a0a0a', border: 'none', fontSize: '32px', cursor: 'pointer', boxShadow: '0 8px 24px rgba(0,0,0,0.4)', zIndex: 100 };
+const taskHeaderStyle: React.CSSProperties = { display: 'flex', gap: '6px', marginBottom: '4px' };
+const taskTitleStyle: React.CSSProperties = { fontSize: '1rem', fontWeight: 'bold' };
+const timeInfoStyle: React.CSSProperties = { fontSize: '0.75rem', opacity: 0.5 };
+const doneBadgeStyle: React.CSSProperties = { fontSize: '0.65rem', color: '#4dff4d' };
+const upcomingBadgeStyle: React.CSSProperties = { fontSize: '0.65rem', color: '#aaa' };
+const getPriorityBadgeStyle = (p: string) => ({ fontSize: '0.6rem', padding: '1px 5px', borderRadius: '3px', backgroundColor: p === 'HIGH' ? '#ff4d4d' : p === 'MEDIUM' ? '#ffa500' : '#4dff4d', color: '#000' });
+const completeButtonStyle: React.CSSProperties = { width: '36px', height: '36px', borderRadius: '18px', border: '1px solid #333', backgroundColor: 'transparent', color: '#4dff4d', fontSize: '1rem', marginLeft: '10px' };
+const floatingAddButtonStyle: React.CSSProperties = { position: 'fixed', bottom: '30px', right: '30px', width: '60px', height: '60px', borderRadius: '30px', backgroundColor: '#fff', color: '#000', fontSize: '24px', border: 'none', cursor: 'pointer', zIndex: 100 };

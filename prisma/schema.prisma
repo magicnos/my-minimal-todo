@@ -1,4 +1,4 @@
-// データベースの設計図（スキーマ）です。
+// データベースの設計図（スキーマ）
 
 generator client {
   provider = "prisma-client-js"
@@ -9,36 +9,32 @@ datasource db {
   url      = env("PRISMA_DATABASE_URL")
 }
 
-// TODOタスクの本体
 model TodoTask {
   id                      Int      @id @default(autoincrement())
   taskTitle               String
   taskMemo                String?
   
-  // 開始時間（新しく追加）
   taskStartTime           DateTime @default(now())
-  
-  // 期限
   taskDeadline            DateTime
   
   taskPriority            String   @default("MEDIUM")
-  taskType                String   @default("SINGLE")
+  taskType                String   @default("SINGLE") // SINGLE or HABIT
   
-  // 通知設定（1つのタスクに対して複数を設定可能に）
+  // 習慣の頻度（DAILY: 毎日, WEEKLY: 毎週, MONTHLY: 毎月）
+  habitFrequency          String?  @default("DAILY")
+  
+  // 最後に完了ボタンを押した日時（習慣用）
+  lastCompletedAt         DateTime?
+
   notifications           TaskNotification[]
   
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
 }
 
-// 通知時間のリスト
 model TaskNotification {
   id                Int      @id @default(autoincrement())
-  
-  // 具体的な通知日時
   notificationTime  DateTime
-  
-  // どのタスクに紐付いているか
   todoTask          TodoTask @relation(fields: [todoTaskId], references: [id], onDelete: Cascade)
   todoTaskId        Int
 }

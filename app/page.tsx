@@ -28,6 +28,6 @@ export default async function TodoMainPage() {
   );
 }
 
-const mainContainerStyle: React.CSSProperties = { padding: '20px', maxWidth: '600px', margin: '0 auto', minHeight: '100vh' };
+const mainContainerStyle: React.CSSProperties = { padding: '20px', maxWidth: '1000px', margin: '0 auto', minHeight: '100vh' };
 const headerStyle: React.CSSProperties = { padding: '40px 0 20px' };
 const titleStyle: React.CSSProperties = { fontSize: '2rem', fontWeight: 'bold' };
