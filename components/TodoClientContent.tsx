@@ -22,59 +22,63 @@ import {
 } from '@dnd-kit/sortable';
 
 export default function TodoClientContent({ initialTasks }: { initialTasks: any[] }) {
-  // サーバーから届いた初期のタスクリストを、画面で管理する状態にします
-  const [displayTasks, setDisplayTasks] = useState(initialTasks);
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [editingTask, setEditingTask] = useState<any | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
 
-  // サーバーのデータが更新されたら、画面上のリストも合わせる
+  // ローカルでの表示用リスト（ソート順に基づいた全件）
+  const [localTasks, setLocalTasks] = useState([...initialTasks].sort((a, b) => a.sortOrder - b.sortOrder));
+
+  // サーバーの初期データが変わった時に反映（ただしドラッグ中などは無視されるようにします）
   useEffect(() => {
-    setDisplayTasks(initialTasks);
+    setLocalTasks([...initialTasks].sort((a, b) => a.sortOrder - b.sortOrder));
   }, [initialTasks]);
 
-  // 現在時刻の更新
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 30000);
     return () => clearInterval(timer);
   }, []);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
   /**
-   * 【ラグ改善：楽観的更新】
-   * ドラッグが終わったら、まず画面上の表示をパッと入れ替える
+   * 【バグ修正】ドラッグ終了時の処理
    */
-  const handleDragEnd = async (event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent, type: 'HABIT' | 'SINGLE') => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
-    // 現在のリストから、移動させたタスクを見つける
-    const oldIndex = displayTasks.findIndex((t) => t.id === active.id);
-    const newIndex = displayTasks.findIndex((t) => t.id === over.id);
+    // 現在表示されている対象のリスト（習慣または一回きり）
+    const relevantTasks = type === 'HABIT' 
+      ? localTasks.filter(t => t.taskType !== 'SINGLE')
+      : localTasks.filter(t => t.taskType === 'SINGLE');
 
-    // 1. まずは画面上のリストをパッと入れ替える（これでラグが消える）
-    const newList = arrayMove(displayTasks, oldIndex, newIndex);
-    setDisplayTasks(newList);
+    const oldIndex = relevantTasks.findIndex(t => t.id === active.id);
+    const newIndex = relevantTasks.findIndex(t => t.id === over.id);
 
-    // 2. その後で、こっそりサーバーに保存しにいく
-    const allIds = newList.map(t => t.id);
-    await updateTaskOrderAction(allIds);
+    // 見た目のリストを入れ替え
+    const newRelevantTasks = arrayMove(relevantTasks, oldIndex, newIndex);
+    
+    // 全体のリストを再構築（動かしていない方のリストと合体させる）
+    const otherTasks = type === 'HABIT'
+      ? localTasks.filter(t => t.taskType === 'SINGLE')
+      : localTasks.filter(t => t.taskType !== 'SINGLE');
+
+    const newAllTasks = [...newRelevantTasks, ...otherTasks];
+    setLocalTasks(newAllTasks);
+
+    // データベースには「表示されている順番全体」のIDリストを送る
+    await updateTaskOrderAction(newAllTasks.map(t => t.id));
   };
 
-  /**
-   * タスクが「完了」しているか判定
-   */
   const getTaskStatus = (task: any) => {
     if (task.taskType === 'SINGLE') return { isDone: false, target: 1, current: 0 };
-    
     let target = task.habitTargetCount || 1;
     let effectiveCount = task.completedCount;
     const lastDone = task.lastCompletedAt ? new Date(task.lastCompletedAt) : null;
-
     if (task.taskType === 'DAILY') {
       const currentDay = currentTime.getDay();
       target = task.habitDailySchedule?.[currentDay] || 0;
@@ -85,66 +89,51 @@ export default function TodoClientContent({ initialTasks }: { initialTasks: any[
       const cycleStart = createdAt.getTime() + Math.floor((currentTime.getTime() - createdAt.getTime()) / periodMs) * periodMs;
       if (lastDone && lastDone.getTime() < cycleStart) effectiveCount = 0;
     }
-
     if (target === 0) return { isDone: true, target: 0, current: 0 };
     return { isDone: effectiveCount >= target, target, current: effectiveCount };
   };
 
-  // 表示用に、ソート順で並び替えてから分ける
-  const sortedTasks = [...displayTasks].sort((a, b) => a.sortOrder - b.sortOrder);
-  const habits = sortedTasks.filter(t => t.taskType !== 'SINGLE');
-  const singles = sortedTasks.filter(t => t.taskType === 'SINGLE');
+  const habits = localTasks.filter(t => t.taskType !== 'SINGLE');
+  const singles = localTasks.filter(t => t.taskType === 'SINGLE');
 
   return (
     <>
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <div style={columnsContainerStyle}>
-          
-          {/* 習慣セクション */}
-          <section style={columnStyle}>
-            <h2 style={sectionTitleStyle}>🔄 習慣</h2>
+      <div style={columnsContainerStyle}>
+        
+        <section style={columnStyle}>
+          <h2 style={sectionTitleStyle}>🔄 習慣</h2>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleDragEnd(e, 'HABIT')}>
             <SortableContext items={habits.map(t => t.id)} strategy={verticalListSortingStrategy}>
               <div style={listStyle}>
                 {habits.map((task) => (
-                  <SortableTaskCard 
-                    key={task.id} 
-                    task={task} 
-                    getTaskStatus={getTaskStatus} 
-                    onEdit={(t) => { setEditingTask(t); setIsFormVisible(true); }}
-                  />
+                  <SortableTaskCard key={task.id} task={task} getTaskStatus={getTaskStatus} onEdit={(t) => { setEditingTask(t); setIsFormVisible(true); }} />
                 ))}
               </div>
             </SortableContext>
-          </section>
+          </DndContext>
+        </section>
 
-          {/* 一回きりセクション */}
-          <section style={columnStyle}>
-            <h2 style={sectionTitleStyle}>📍 一回きり</h2>
+        <section style={columnStyle}>
+          <h2 style={sectionTitleStyle}>📍 一回きり</h2>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleDragEnd(e, 'SINGLE')}>
             <SortableContext items={singles.map(t => t.id)} strategy={verticalListSortingStrategy}>
               <div style={listStyle}>
                 {singles.map((task) => (
-                  <SortableTaskCard 
-                    key={task.id} 
-                    task={task} 
-                    getTaskStatus={getTaskStatus} 
-                    onEdit={(t) => { setEditingTask(t); setIsFormVisible(true); }}
-                  />
+                  <SortableTaskCard key={task.id} task={task} getTaskStatus={getTaskStatus} onEdit={(t) => { setEditingTask(t); setIsFormVisible(true); }} />
                 ))}
               </div>
             </SortableContext>
-          </section>
+          </DndContext>
+        </section>
 
-        </div>
-      </DndContext>
+      </div>
 
       <button onClick={() => { setEditingTask(null); setIsFormVisible(true); }} style={floatingAddButtonStyle}>+</button>
-      
       {isFormVisible && <TaskCreateForm onComplete={() => { setIsFormVisible(false); setEditingTask(null); }} editTaskData={editingTask} />}
     </>
   );
 }
 
-// --- デザイン ---
 const columnsContainerStyle: React.CSSProperties = { display: 'flex', gap: '24px', flexWrap: 'wrap' };
 const columnStyle: React.CSSProperties = { flex: '1', minWidth: '320px' };
 const sectionTitleStyle: React.CSSProperties = { fontSize: '0.85rem', opacity: 0.5, marginBottom: '16px', fontWeight: 'bold' };
