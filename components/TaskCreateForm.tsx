@@ -45,10 +45,10 @@ export default function TaskCreateForm({ onComplete, editTaskData }: { onComplet
         <div style={inputGroupStyle}>
           <label style={labelStyle}>タイプ</label>
           <div style={typeTabContainerStyle}>
-            {['DAILY', 'SINGLE_DAY', 'MULTI_DAY', 'SINGLE'].map(type => (
+            {['DAILY', 'MULTI_DAY', 'SINGLE'].map(type => (
               <button key={type} type="button" onClick={() => setTaskType(type)}
                 style={{ ...typeTabStyle, backgroundColor: taskType === type ? '#ededed' : '#171717', color: taskType === type ? '#0a0a0a' : '#fff' }}>
-                {type === 'DAILY' ? '毎日' : type === 'SINGLE_DAY' ? '一日' : type === 'MULTI_DAY' ? '複数日' : '一回'}
+                {type === 'DAILY' ? '毎日' : type === 'MULTI_DAY' ? '複数日' : '一回'}
               </button>
             ))}
             <input type="hidden" name="taskType" value={taskType} />
@@ -64,15 +64,6 @@ export default function TaskCreateForm({ onComplete, editTaskData }: { onComplet
                   <input name={`dailyCount_${day.value}`} type="number" min="0" defaultValue={editTaskData?.habitDailySchedule?.[day.value] || 0} style={smallInputStyle} />
                 </div>
               ))}
-            </div>
-          )}
-
-          {taskType === 'SINGLE_DAY' && (
-            <div style={rowStyle}>
-              <div style={halfInputStyle}>
-                <label style={labelStyle}>目標回数</label>
-                <input name="habitTargetCount" type="number" min="1" defaultValue={editTaskData?.habitTargetCount || 1} style={inputStyle} />
-              </div>
             </div>
           )}
 
@@ -144,7 +135,6 @@ export default function TaskCreateForm({ onComplete, editTaskData }: { onComplet
   );
 }
 
-// スタイルは以前のものを維持しつつ調整
 const overlayStyle: React.CSSProperties = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'flex-end', zIndex: 1000 };
 const formCardStyle: React.CSSProperties = { backgroundColor: '#171717', width: '100%', maxWidth: '500px', padding: '24px', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', maxHeight: '95vh', overflowY: 'auto' };
 const formTitleStyle: React.CSSProperties = { marginBottom: '20px', fontSize: '1.2rem', fontWeight: 'bold' };

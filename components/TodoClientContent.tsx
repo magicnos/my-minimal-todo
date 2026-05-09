@@ -14,18 +14,11 @@ export default function TodoClientContent({ initialTasks }: { initialTasks: any[
     return () => clearInterval(timer);
   }, []);
 
-  /**
-   * 並び替え処理：特定のインデックスの要素を移動させる
-   */
   const handleMoveTask = async (index: number, direction: 'up' | 'down', list: any[]) => {
     const newList = [...list];
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
     if (targetIndex < 0 || targetIndex >= newList.length) return;
-
-    // 入れ替え
     [newList[index], newList[targetIndex]] = [newList[targetIndex], newList[index]];
-    
-    // 全体のIDリストを作成してサーバーに送る
     const allIds = newList.map(t => t.id);
     await updateTaskOrderAction(allIds);
   };
@@ -41,12 +34,8 @@ export default function TodoClientContent({ initialTasks }: { initialTasks: any[
       const currentDay = currentTime.getDay();
       target = task.habitDailySchedule?.[currentDay] || 0;
       if (lastDone && lastDone.toDateString() !== currentTime.toDateString()) effectiveCount = 0;
-    } else if (task.taskType === 'SINGLE_DAY') {
-      // 一日（旧毎週）：24時間ごとにリセット
-      if (lastDone && (currentTime.getTime() - lastDone.getTime() > 86400000)) effectiveCount = 0;
     } else if (task.taskType === 'MULTI_DAY') {
-      // 複数日：期間の開始・終了に基づいて判定（簡易的に作成日からの周期で計算）
-      const periodMs = 7 * 86400000; // 週単位
+      const periodMs = 7 * 86400000;
       const createdAt = new Date(task.createdAt);
       const cycleStart = createdAt.getTime() + Math.floor((currentTime.getTime() - createdAt.getTime()) / periodMs) * periodMs;
       if (lastDone && lastDone.getTime() < cycleStart) effectiveCount = 0;
@@ -61,7 +50,6 @@ export default function TodoClientContent({ initialTasks }: { initialTasks: any[
 
     return (
       <div key={task.id} style={{ ...taskCardStyle, opacity: isDone ? 0.2 : 1 }}>
-        {/* 並び替えボタン */}
         <div style={orderButtonsStyle}>
           <button onClick={() => handleMoveTask(index, 'up', list)} style={orderButtonStyle} disabled={index === 0}>▲</button>
           <button onClick={() => handleMoveTask(index, 'down', list)} style={orderButtonStyle} disabled={index === list.length - 1}>▼</button>
@@ -76,7 +64,7 @@ export default function TodoClientContent({ initialTasks }: { initialTasks: any[
           <div style={timeInfoStyle}>
             {task.taskType === 'SINGLE' ? `〆: ${new Date(task.taskDeadline).toLocaleString('ja-JP', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}` 
             : task.taskType === 'MULTI_DAY' ? `${['日','月','火','水','木','金','土'][task.habitStartDay]} ${task.habitStartTime} 〜 ${['日','月','火','水','木','金','土'][task.habitEndDay]} ${task.habitEndTime}`
-            : task.taskType === 'SINGLE_DAY' ? '一日' : '毎日'}
+            : '毎日'}
           </div>
           {task.taskType !== 'SINGLE' && target > 0 && <div style={progressStyle}>{current} / {target}</div>}
         </div>
@@ -87,7 +75,6 @@ export default function TodoClientContent({ initialTasks }: { initialTasks: any[
     );
   };
 
-  // sortOrder に基づいて並び替えてから表示
   const sortedTasks = [...initialTasks].sort((a, b) => a.sortOrder - b.sortOrder);
   const habits = sortedTasks.filter(t => t.taskType !== 'SINGLE');
   const singles = sortedTasks.filter(t => t.taskType === 'SINGLE');
@@ -96,7 +83,7 @@ export default function TodoClientContent({ initialTasks }: { initialTasks: any[
     <>
       <div style={columnsContainerStyle}>
         <section style={columnStyle}>
-          <h2 style={sectionTitleStyle}>🔄 習慣 (毎日/一日/複数日)</h2>
+          <h2 style={sectionTitleStyle}>🔄 習慣</h2>
           <div style={listStyle}>{habits.map((t, i) => renderTaskCard(t, i, habits))}</div>
         </section>
         <section style={columnStyle}>
