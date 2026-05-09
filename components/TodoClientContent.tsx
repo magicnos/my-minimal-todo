@@ -22,45 +22,52 @@ import {
 } from '@dnd-kit/sortable';
 
 export default function TodoClientContent({ initialTasks }: { initialTasks: any[] }) {
+  // サーバーから届いた初期のタスクリストを、画面で管理する状態にします
+  const [displayTasks, setDisplayTasks] = useState(initialTasks);
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [editingTask, setEditingTask] = useState<any | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
 
-  // センサーの設定（マウス、タッチ、キーボード）
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8, // 8px動かしたらドラッグ開始（誤操作防止）
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
+  // サーバーのデータが更新されたら、画面上のリストも合わせる
+  useEffect(() => {
+    setDisplayTasks(initialTasks);
+  }, [initialTasks]);
 
+  // 現在時刻の更新
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 30000);
     return () => clearInterval(timer);
   }, []);
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
   /**
-   * ドラッグが終了した時の処理
+   * 【ラグ改善：楽観的更新】
+   * ドラッグが終わったら、まず画面上の表示をパッと入れ替える
    */
-  const handleDragEnd = async (event: DragEndEvent, list: any[]) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
+    if (!over || active.id === over.id) return;
 
-    if (over && active.id !== over.id) {
-      const oldIndex = list.findIndex((t) => t.id === active.id);
-      const newIndex = list.findIndex((t) => t.id === over.id);
+    // 現在のリストから、移動させたタスクを見つける
+    const oldIndex = displayTasks.findIndex((t) => t.id === active.id);
+    const newIndex = displayTasks.findIndex((t) => t.id === over.id);
 
-      const newList = arrayMove(list, oldIndex, newIndex);
-      const allIds = newList.map(t => t.id);
-      
-      // データベースの並び順を更新
-      await updateTaskOrderAction(allIds);
-    }
+    // 1. まずは画面上のリストをパッと入れ替える（これでラグが消える）
+    const newList = arrayMove(displayTasks, oldIndex, newIndex);
+    setDisplayTasks(newList);
+
+    // 2. その後で、こっそりサーバーに保存しにいく
+    const allIds = newList.map(t => t.id);
+    await updateTaskOrderAction(allIds);
   };
 
+  /**
+   * タスクが「完了」しているか判定
+   */
   const getTaskStatus = (task: any) => {
     if (task.taskType === 'SINGLE') return { isDone: false, target: 1, current: 0 };
     
@@ -83,21 +90,19 @@ export default function TodoClientContent({ initialTasks }: { initialTasks: any[
     return { isDone: effectiveCount >= target, target, current: effectiveCount };
   };
 
-  const sortedTasks = [...initialTasks].sort((a, b) => a.sortOrder - b.sortOrder);
+  // 表示用に、ソート順で並び替えてから分ける
+  const sortedTasks = [...displayTasks].sort((a, b) => a.sortOrder - b.sortOrder);
   const habits = sortedTasks.filter(t => t.taskType !== 'SINGLE');
   const singles = sortedTasks.filter(t => t.taskType === 'SINGLE');
 
   return (
     <>
-      <div style={columnsContainerStyle}>
-        {/* 習慣セクション */}
-        <section style={columnStyle}>
-          <h2 style={sectionTitleStyle}>🔄 習慣</h2>
-          <DndContext 
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={(e) => handleDragEnd(e, habits)}
-          >
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <div style={columnsContainerStyle}>
+          
+          {/* 習慣セクション */}
+          <section style={columnStyle}>
+            <h2 style={sectionTitleStyle}>🔄 習慣</h2>
             <SortableContext items={habits.map(t => t.id)} strategy={verticalListSortingStrategy}>
               <div style={listStyle}>
                 {habits.map((task) => (
@@ -110,17 +115,11 @@ export default function TodoClientContent({ initialTasks }: { initialTasks: any[
                 ))}
               </div>
             </SortableContext>
-          </DndContext>
-        </section>
+          </section>
 
-        {/* 一回きりセクション */}
-        <section style={columnStyle}>
-          <h2 style={sectionTitleStyle}>📍 一回きり</h2>
-          <DndContext 
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={(e) => handleDragEnd(e, singles)}
-          >
+          {/* 一回きりセクション */}
+          <section style={columnStyle}>
+            <h2 style={sectionTitleStyle}>📍 一回きり</h2>
             <SortableContext items={singles.map(t => t.id)} strategy={verticalListSortingStrategy}>
               <div style={listStyle}>
                 {singles.map((task) => (
@@ -133,16 +132,19 @@ export default function TodoClientContent({ initialTasks }: { initialTasks: any[
                 ))}
               </div>
             </SortableContext>
-          </DndContext>
-        </section>
-      </div>
+          </section>
+
+        </div>
+      </DndContext>
 
       <button onClick={() => { setEditingTask(null); setIsFormVisible(true); }} style={floatingAddButtonStyle}>+</button>
+      
       {isFormVisible && <TaskCreateForm onComplete={() => { setIsFormVisible(false); setEditingTask(null); }} editTaskData={editingTask} />}
     </>
   );
 }
 
+// --- デザイン ---
 const columnsContainerStyle: React.CSSProperties = { display: 'flex', gap: '24px', flexWrap: 'wrap' };
 const columnStyle: React.CSSProperties = { flex: '1', minWidth: '320px' };
 const sectionTitleStyle: React.CSSProperties = { fontSize: '0.85rem', opacity: 0.5, marginBottom: '16px', fontWeight: 'bold' };
