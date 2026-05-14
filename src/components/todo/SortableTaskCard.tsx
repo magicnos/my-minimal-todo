@@ -30,7 +30,7 @@ export default function SortableTaskCard({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : (getTaskStatus(task).isDone ? 0.2 : 1),
+    opacity: isDragging ? 0.5 : (getTaskStatus(task).isDone ? 0.4 : 1),
     zIndex: isDragging ? 1000 : 1,
   };
 

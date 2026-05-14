@@ -203,7 +203,7 @@ export default function TodoClientContent({ initialTasks, userProfile, rewards }
   );
 }
 
-const statsContainerStyle: React.CSSProperties = { display: 'flex', gap: '24px', backgroundColor: '#171717', padding: '20px', borderRadius: '16px', marginBottom: '16px', alignItems: 'center', border: '1px solid #333' };
+const statsContainerStyle: React.CSSProperties = { maxWidth: '600px', margin: '0 auto 16px auto', display: 'flex', gap: '24px', backgroundColor: '#171717', padding: '20px', borderRadius: '16px', alignItems: 'center', border: '1px solid #333' };
 const statItemStyle: React.CSSProperties = { textAlign: 'center' };
 const statLabelStyle: React.CSSProperties = { fontSize: '0.65rem', opacity: 0.5, fontWeight: 'bold', marginBottom: '4px' };
 const statValueStyle: React.CSSProperties = { fontSize: '1.2rem', fontWeight: 'bold' };
@@ -211,8 +211,8 @@ const xpContainerStyle: React.CSSProperties = { flex: 1 };
 const xpProgressBarBgStyle: React.CSSProperties = { height: '8px', backgroundColor: '#333', borderRadius: '4px', overflow: 'hidden', marginTop: '4px' };
 const xpProgressBarFillStyle: React.CSSProperties = { height: '100%', backgroundColor: '#4dff4d', transition: 'width 0.3s ease' };
 
-const contentContainerStyle: React.CSSProperties = { minHeight: '60vh' };
-const columnStyle: React.CSSProperties = { width: '100%', maxWidth: '600px', margin: '0 auto' };
+const contentContainerStyle: React.CSSProperties = { minHeight: '60vh', maxWidth: '600px', margin: '0 auto' };
+const columnStyle: React.CSSProperties = { width: '100%' };
 const sectionTitleStyle: React.CSSProperties = { fontSize: '0.85rem', opacity: 0.5, marginBottom: '16px', fontWeight: 'bold', display: 'none' };
 const listStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '12px', paddingBottom: '100px' };
 
