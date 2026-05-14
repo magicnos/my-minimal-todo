@@ -33,6 +33,16 @@ export default function TaskCreateForm({ onComplete, editTaskData }: { onComplet
     });
   };
 
+  const decrementAllDays = () => {
+    setDailyCounts(prev => {
+      const next = { ...prev };
+      for (let i = 0; i < 7; i++) {
+        next[i] = Math.max(0, (next[i] || 0) - 1);
+      }
+      return next;
+    });
+  };
+
   const updateDailyCount = (day: number, val: number) => {
     setDailyCounts(prev => ({ ...prev, [day]: val }));
   };
@@ -81,7 +91,10 @@ export default function TaskCreateForm({ onComplete, editTaskData }: { onComplet
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                 <label style={{ ...labelStyle, marginBottom: 0 }}>曜日ごとの目標回数</label>
-                <button type="button" onClick={incrementAllDays} style={miniButtonStyle}>毎日+1</button>
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  <button type="button" onClick={decrementAllDays} style={miniButtonStyle}>毎日-1</button>
+                  <button type="button" onClick={incrementAllDays} style={miniButtonStyle}>毎日+1</button>
+                </div>
               </div>
               <div style={daysGridStyle}>
                 {daysOfWeek.map(day => (
