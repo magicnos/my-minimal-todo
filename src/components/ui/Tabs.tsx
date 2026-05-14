@@ -55,12 +55,12 @@ const tabButtonStyle: React.CSSProperties = {
   flexDirection: 'column',
   alignItems: 'center',
   justifyContent: 'center',
-  padding: '10px 4px',
+  padding: '12px 8px',
   border: 'none',
   borderRadius: '12px',
   cursor: 'pointer',
   transition: 'all 0.2s ease',
-  gap: '4px',
+  gap: '6px',
 };
 
 const tabIconStyle: React.CSSProperties = {
