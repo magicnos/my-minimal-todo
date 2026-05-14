@@ -1,5 +1,5 @@
 import prisma from '@/lib/prisma';
-import TodoClientContent from '@/components/TodoClientContent';
+import TodoClientContent from '@/components/todo/TodoClientContent';
 
 export const dynamic = 'force-dynamic';
 

@@ -2,6 +2,7 @@
 
 import { createTaskAction, updateTaskAction } from '@/app/actions';
 import { useState } from 'react';
+import Modal from '@/components/ui/Modal';
 
 const formatToLocalString = (date?: Date) => {
   if (!date) return "";
@@ -20,7 +21,7 @@ export default function TaskCreateForm({ onComplete, editTaskData }: { onComplet
   ];
 
   return (
-    <div style={overlayStyle}>
+    <Modal onClose={onComplete} title={editTaskData ? '編集' : '新規追加'}>
       <form onSubmit={async (e) => {
         e.preventDefault();
         setIsSubmitting(true);
@@ -33,10 +34,8 @@ export default function TaskCreateForm({ onComplete, editTaskData }: { onComplet
           else { await createTaskAction(formData); }
           onComplete();
         } finally { setIsSubmitting(false); }
-      }} style={formCardStyle}>
+      }}>
         
-        <h2 style={formTitleStyle}>{editTaskData ? '編集' : '新規追加'}</h2>
-
         <div style={inputGroupStyle}>
           <label style={labelStyle}>タイトル</label>
           <input name="taskTitle" type="text" required defaultValue={editTaskData?.taskTitle} style={inputStyle} />
@@ -139,13 +138,10 @@ export default function TaskCreateForm({ onComplete, editTaskData }: { onComplet
           <button type="submit" disabled={isSubmitting} style={submitButtonStyle}>保存する</button>
         </div>
       </form>
-    </div>
+    </Modal>
   );
 }
 
-const overlayStyle: React.CSSProperties = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'flex-end', zIndex: 1000 };
-const formCardStyle: React.CSSProperties = { backgroundColor: '#171717', width: '100%', maxWidth: '500px', padding: '24px', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', maxHeight: '95vh', overflowY: 'auto' };
-const formTitleStyle: React.CSSProperties = { marginBottom: '20px', fontSize: '1.2rem', fontWeight: 'bold' };
 const inputGroupStyle: React.CSSProperties = { marginBottom: '16px' };
 const labelStyle: React.CSSProperties = { display: 'block', marginBottom: '6px', fontSize: '0.85rem', opacity: 0.7 };
 const inputStyle: React.CSSProperties = { width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #333', backgroundColor: '#0a0a0a', color: '#fff', fontSize: '1rem' };
