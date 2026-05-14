@@ -50,12 +50,13 @@ const tabsContainerStyle: React.CSSProperties = {
 };
 
 const tabButtonStyle: React.CSSProperties = {
-  flex: 1,
+  flex: '1 1 0',
+  minWidth: 0,
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
   justifyContent: 'center',
-  padding: '12px 8px',
+  padding: '12px 4px',
   border: 'none',
   borderRadius: '12px',
   cursor: 'pointer',
