@@ -28,8 +28,10 @@ const overlayStyle: React.CSSProperties = {
   backgroundColor: 'rgba(0,0,0,0.8)', 
   display: 'flex', 
   justifyContent: 'center', 
-  alignItems: 'flex-end', 
-  zIndex: 1000 
+  alignItems: 'center', // 画面真ん中に変更
+  zIndex: 1000,
+  padding: '20px',
+  boxSizing: 'border-box'
 };
 
 const formCardStyle: React.CSSProperties = { 
@@ -37,10 +39,11 @@ const formCardStyle: React.CSSProperties = {
   width: '100%', 
   maxWidth: '500px', 
   padding: '24px', 
-  borderTopLeftRadius: '24px', 
-  borderTopRightRadius: '24px', 
-  maxHeight: '95vh', 
-  overflowY: 'auto' 
+  borderRadius: '24px', // 下部固定ではないので四隅を丸く
+  maxHeight: '90vh', 
+  overflowY: 'auto',
+  position: 'relative',
+  border: '1px solid #333'
 };
 
 const formTitleStyle: React.CSSProperties = { 

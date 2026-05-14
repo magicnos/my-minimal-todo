@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import TaskCreateForm from './TaskCreateForm';
+import RewardCreateForm from './RewardCreateForm';
+import SettingsForm from './SettingsForm';
 import SortableTaskCard from './SortableTaskCard';
-import { updateTaskOrderAction, createRewardAction, deleteRewardAction, exchangeRewardAction } from '@/app/actions';
+import { updateTaskOrderAction, deleteRewardAction, exchangeRewardAction } from '@/app/actions';
 import Tabs from '@/components/ui/Tabs';
 
 import {
@@ -25,8 +27,11 @@ import {
 export default function TodoClientContent({ initialTasks, userProfile, rewards }: { initialTasks: any[], userProfile: any, rewards: any[] }) {
   const [activeTab, setActiveTab] = useState('HABIT');
   const [isFormVisible, setIsFormVisible] = useState(false);
+  const [isRewardFormVisible, setIsRewardFormVisible] = useState(false);
+  const [isSettingsVisible, setIsSettingsVisible] = useState(false);
   const [editingTask, setEditingTask] = useState<any | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [singleSortMode, setSingleSortMode] = useState<'SORT_ORDER' | 'DEADLINE'>('SORT_ORDER');
 
   const [localTasks, setLocalTasks] = useState([...initialTasks].sort((a, b) => a.sortOrder - b.sortOrder));
 
@@ -44,7 +49,8 @@ export default function TodoClientContent({ initialTasks, userProfile, rewards }
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  const xpToNextLevel = userProfile.level * 100;
+  const xpScaling = userProfile.xpScaling || 100;
+  const xpToNextLevel = userProfile.level * xpScaling;
   const xpPercentage = Math.min(100, (userProfile.xp / xpToNextLevel) * 100);
 
   const handleDragEnd = async (event: DragEndEvent, type: 'HABIT' | 'SINGLE') => {
@@ -90,7 +96,12 @@ export default function TodoClientContent({ initialTasks, userProfile, rewards }
   };
 
   const habits = localTasks.filter(t => t.taskType !== 'SINGLE');
-  const singles = localTasks.filter(t => t.taskType === 'SINGLE');
+  const singles = [...localTasks.filter(t => t.taskType === 'SINGLE')].sort((a, b) => {
+    if (singleSortMode === 'DEADLINE') {
+      return new Date(a.taskDeadline).getTime() - new Date(b.taskDeadline).getTime();
+    }
+    return 0; // Already sorted by sortOrder in localTasks
+  });
 
   const tabs = [
     { id: 'HABIT', label: '習慣', icon: '🔄' },
@@ -106,6 +117,14 @@ export default function TodoClientContent({ initialTasks, userProfile, rewards }
 
   return (
     <div style={mainWrapperStyle}>
+      <button 
+        onClick={() => setIsSettingsVisible(true)} 
+        style={settingsButtonStyle}
+        title="設定"
+      >
+        ⚙️
+      </button>
+
       <div style={statsContainerStyle}>
         <div style={statItemStyle}>
           <div style={statLabelStyle}>LEVEL</div>
@@ -145,8 +164,16 @@ export default function TodoClientContent({ initialTasks, userProfile, rewards }
 
         {activeTab === 'SINGLE' && (
           <section style={columnStyle}>
+            <div style={sortButtonContainerStyle}>
+              <button 
+                onClick={() => setSingleSortMode(m => m === 'SORT_ORDER' ? 'DEADLINE' : 'SORT_ORDER')}
+                style={singleSortMode === 'DEADLINE' ? activeSortButtonStyle : sortButtonStyle}
+              >
+                {singleSortMode === 'DEADLINE' ? '📅 期限の近い順' : '🔢 自由な並び順'}
+              </button>
+            </div>
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleDragEnd(e, 'SINGLE')}>
-              <SortableContext items={singles.map(t => t.id)} strategy={verticalListSortingStrategy}>
+              <SortableContext items={singles.map(t => t.id)} strategy={verticalListSortingStrategy} disabled={singleSortMode === 'DEADLINE'}>
                 <div style={listStyle}>
                   {singles.map((task) => (
                     <SortableTaskCard key={task.id} task={task} getTaskStatus={getTaskStatus} onEdit={(t) => { setEditingTask(t); setIsFormVisible(true); }} />
@@ -161,11 +188,6 @@ export default function TodoClientContent({ initialTasks, userProfile, rewards }
 
         {activeTab === 'REWARD' && (
           <section style={columnStyle}>
-            <form action={createRewardAction} style={rewardFormStyle}>
-              <input name="title" placeholder="ご褒美の名称" required style={rewardInputStyle} />
-              <input name="pointsCost" type="number" placeholder="必要P" required style={rewardPointsInputStyle} />
-              <button type="submit" style={rewardAddButtonStyle}>+</button>
-            </form>
             <div style={listStyle}>
               {rewards.map((reward: any) => (
                 <div key={reward.id} style={rewardCardStyle}>
@@ -191,12 +213,15 @@ export default function TodoClientContent({ initialTasks, userProfile, rewards }
               ))}
               {rewards.length === 0 && <div style={emptyStateStyle}>ご褒美はまだありません</div>}
             </div>
+            <button onClick={() => setIsRewardFormVisible(true)} style={floatingAddButtonStyle}>+</button>
           </section>
         )}
 
       </div>
 
       {isFormVisible && <TaskCreateForm onComplete={() => { setIsFormVisible(false); setEditingTask(null); }} editTaskData={editingTask} />}
+      {isRewardFormVisible && <RewardCreateForm onComplete={() => setIsRewardFormVisible(false)} />}
+      {isSettingsVisible && <SettingsForm onComplete={() => setIsSettingsVisible(false)} initialData={userProfile} />}
     </div>
   );
 }
@@ -215,6 +240,19 @@ const mainWrapperStyle: React.CSSProperties = {
   boxSizing: 'border-box'
 };
 
+const settingsButtonStyle: React.CSSProperties = {
+  position: 'absolute',
+  top: '20px',
+  right: '20px',
+  backgroundColor: 'transparent',
+  border: 'none',
+  fontSize: '1.2rem',
+  cursor: 'pointer',
+  opacity: 0.5,
+  zIndex: 10,
+  padding: '10px'
+};
+
 const statsContainerStyle: React.CSSProperties = { display: 'flex', gap: '24px', backgroundColor: '#171717', padding: '20px', borderRadius: '24px', marginBottom: '24px', alignItems: 'center', border: '1px solid #333' };
 const statItemStyle: React.CSSProperties = { textAlign: 'center' };
 const statLabelStyle: React.CSSProperties = { fontSize: '0.65rem', opacity: 0.5, fontWeight: 'bold', marginBottom: '4px' };
@@ -228,10 +266,10 @@ const columnStyle: React.CSSProperties = { width: '100%' };
 const listStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '12px', paddingBottom: '100px' };
 const emptyStateStyle: React.CSSProperties = { textAlign: 'center', padding: '40px 20px', opacity: 0.3, fontSize: '0.9rem' };
 
-const rewardFormStyle: React.CSSProperties = { display: 'flex', gap: '8px', marginBottom: '24px', padding: '12px', backgroundColor: '#171717', borderRadius: '14px', border: '1px solid #333' };
-const rewardInputStyle: React.CSSProperties = { flex: 2, padding: '10px', borderRadius: '8px', border: '1px solid #333', backgroundColor: '#0a0a0a', color: '#fff', fontSize: '0.85rem' };
-const rewardPointsInputStyle: React.CSSProperties = { flex: '0 0 80px', padding: '10px', borderRadius: '8px', border: '1px solid #333', backgroundColor: '#0a0a0a', color: '#fff', fontSize: '0.85rem' };
-const rewardAddButtonStyle: React.CSSProperties = { padding: '8px 16px', borderRadius: '8px', border: 'none', backgroundColor: '#ededed', color: '#0a0a0a', fontWeight: 'bold', cursor: 'pointer' };
+const sortButtonContainerStyle: React.CSSProperties = { display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' };
+const sortButtonStyle: React.CSSProperties = { padding: '6px 12px', borderRadius: '8px', border: '1px solid #333', backgroundColor: 'transparent', color: '#888', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold', transition: 'all 0.2s ease' };
+const activeSortButtonStyle: React.CSSProperties = { ...sortButtonStyle, backgroundColor: '#333', color: '#fff', borderColor: '#444' };
+
 const rewardCardStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', backgroundColor: '#171717', borderRadius: '14px', border: '1px solid #333' };
 const rewardInfoStyle: React.CSSProperties = { flex: 1, minWidth: 0, marginRight: '8px' };
 const rewardTitleStyle: React.CSSProperties = { fontSize: '1rem', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };

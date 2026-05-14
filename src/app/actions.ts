@@ -10,7 +10,7 @@ async function getOrCreateProfile() {
   let profile = await prisma.userProfile.findUnique({ where: { id: 1 } });
   if (!profile) {
     profile = await prisma.userProfile.create({
-      data: { id: 1, points: 0, xp: 0, level: 1 }
+      data: { id: 1, points: 0, xp: 0, level: 1, xpScaling: 100 }
     });
   }
   return profile;
@@ -46,6 +46,7 @@ function extractTaskData(formData: FormData) {
     habitTargetCount: parseInt(formData.get('habitTargetCount') as string || '1'),
     rewardPoints: parseInt(formData.get('rewardPoints') as string || '10'),
     rewardXP: parseInt(formData.get('rewardXP') as string || '10'),
+    rewardTiming: (formData.get('rewardTiming') as string) || "EACH",
   };
 }
 
@@ -67,7 +68,7 @@ export async function updateTaskAction(taskId: number, formData: FormData) {
 }
 
 /**
- * 【バグ修正】指定された順番通りに sortOrder を振り直します
+ * 指定された順番通りに sortOrder を振り直します
  */
 export async function updateTaskOrderAction(orderedIds: number[]) {
   for (let i = 0; i < orderedIds.length; i++) {
@@ -83,34 +84,62 @@ export async function completeTaskAction(taskId: number, currentCount: number) {
   const task = await prisma.todoTask.findUnique({ where: { id: taskId } });
   if (!task) return;
 
+  const nextCount = currentCount + 1;
+  
+  // 目標値の取得
+  let target = task.habitTargetCount || 1;
+  if (task.taskType === 'DAILY') {
+    const currentDay = new Date().getDay();
+    target = (task.habitDailySchedule as any)?.[currentDay] || 0;
+  }
+
   // タスクを更新
   await prisma.todoTask.update({
     where: { id: taskId },
-    data: { completedCount: currentCount + 1, lastCompletedAt: new Date() }
+    data: { completedCount: nextCount, lastCompletedAt: new Date() }
   });
 
-  // 報酬を付与
-  const profile = await getOrCreateProfile();
-  let newXP = profile.xp + task.rewardXP;
-  let newLevel = profile.level;
-  let newPoints = profile.points + task.rewardPoints;
+  // 報酬を付与するか判定
+  const shouldGiveReward = task.rewardTiming === 'EACH' || (task.rewardTiming === 'TOTAL' && nextCount >= target);
 
-  // レベルアップ判定 (次レベルに必要なXP = level * 100)
-  while (newXP >= newLevel * 100) {
-    newXP -= newLevel * 100;
-    newLevel += 1;
+  if (shouldGiveReward) {
+    const profile = await getOrCreateProfile();
+    let newXP = profile.xp + task.rewardXP;
+    let newLevel = profile.level;
+    let newPoints = profile.points + task.rewardPoints;
+
+    const xpPerLevel = profile.xpScaling || 100;
+
+    // レベルアップ判定
+    while (newXP >= newLevel * xpPerLevel) {
+      newXP -= newLevel * xpPerLevel;
+      newLevel += 1;
+    }
+
+    await prisma.userProfile.update({
+      where: { id: 1 },
+      data: { xp: newXP, level: newLevel, points: newPoints }
+    });
   }
-
-  await prisma.userProfile.update({
-    where: { id: 1 },
-    data: { xp: newXP, level: newLevel, points: newPoints }
-  });
 
   revalidatePath('/');
 }
 
 export async function deleteTaskAction(taskId: number) {
   await prisma.todoTask.delete({ where: { id: taskId } });
+  revalidatePath('/');
+}
+
+export async function updateSettingsAction(formData: FormData) {
+  const level = parseInt(formData.get('level') as string || '1');
+  const xp = parseInt(formData.get('xp') as string || '0');
+  const points = parseInt(formData.get('points') as string || '0');
+  const xpScaling = parseInt(formData.get('xpScaling') as string || '100');
+
+  await prisma.userProfile.update({
+    where: { id: 1 },
+    data: { level, xp, points, xpScaling }
+  });
   revalidatePath('/');
 }
 

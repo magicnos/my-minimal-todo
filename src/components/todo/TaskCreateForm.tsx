@@ -50,7 +50,7 @@ export default function TaskCreateForm({ onComplete, editTaskData }: { onComplet
               {['DAILY', 'MULTI_DAY'].map(type => (
                 <button key={type} type="button" onClick={() => setTaskType(type)}
                   style={{ ...typeTabStyle, backgroundColor: taskType === type ? '#ededed' : '#171717', color: taskType === type ? '#0a0a0a' : '#fff' }}>
-                  {type === 'DAILY' ? '毎日' : '複数日'}
+                  {type === 'DAILY' ? '1日' : '複数日'}
                 </button>
               ))}
               <input type="hidden" name="taskType" value={taskType} />
@@ -61,13 +61,16 @@ export default function TaskCreateForm({ onComplete, editTaskData }: { onComplet
 
         <div style={detailSectionStyle}>
           {taskType === 'DAILY' && (
-            <div style={daysGridStyle}>
-              {daysOfWeek.map(day => (
-                <div key={day.value} style={dayInputItemStyle}>
-                  <label style={smallLabelStyle}>{day.label}</label>
-                  <input name={`dailyCount_${day.value}`} type="number" min="0" defaultValue={editTaskData?.habitDailySchedule?.[day.value] || 0} style={smallInputStyle} />
-                </div>
-              ))}
+            <div>
+              <label style={{ ...labelStyle, marginBottom: '12px' }}>曜日ごとの目標回数</label>
+              <div style={daysGridStyle}>
+                {daysOfWeek.map(day => (
+                  <div key={day.value} style={dayInputItemStyle}>
+                    <label style={smallLabelStyle}>{day.label}</label>
+                    <input name={`dailyCount_${day.value}`} type="number" min="0" defaultValue={editTaskData?.habitDailySchedule?.[day.value] || 0} style={smallInputStyle} />
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
@@ -123,6 +126,16 @@ export default function TaskCreateForm({ onComplete, editTaskData }: { onComplet
               <option value="HIGH">高</option>
             </select>
           </div>
+          <div style={halfInputStyle}>
+            <label style={labelStyle}>報酬タイミング</label>
+            <select name="rewardTiming" defaultValue={editTaskData?.rewardTiming || "EACH"} style={inputStyle}>
+              <option value="EACH">1回ごと</option>
+              <option value="TOTAL">全達成時</option>
+            </select>
+          </div>
+        </div>
+
+        <div style={rowStyle}>
           <div style={halfInputStyle}>
             <label style={labelStyle}>獲得XP</label>
             <input name="rewardXP" type="number" min="0" defaultValue={editTaskData?.rewardXP || 10} style={inputStyle} />
