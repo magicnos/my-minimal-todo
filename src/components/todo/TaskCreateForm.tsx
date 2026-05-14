@@ -20,8 +20,10 @@ export default function TaskCreateForm({ onComplete, editTaskData }: { onComplet
     { label: '水', value: 3 }, { label: '木', value: 4 }, { label: '金', value: 5 }, { label: '土', value: 6 }
   ];
 
+  const isHabitMode = taskType === 'DAILY' || taskType === 'MULTI_DAY';
+
   return (
-    <Modal onClose={onComplete} title={editTaskData ? '編集' : '新規追加'}>
+    <Modal onClose={onComplete} title={editTaskData?.id ? '編集' : '新規追加'}>
       <form onSubmit={async (e) => {
         e.preventDefault();
         setIsSubmitting(true);
@@ -30,7 +32,7 @@ export default function TaskCreateForm({ onComplete, editTaskData }: { onComplet
           formData.set('taskDeadline', new Date(formData.get('taskDeadline') as string).toISOString());
         }
         try {
-          if (editTaskData) { await updateTaskAction(editTaskData.id, formData); }
+          if (editTaskData?.id) { await updateTaskAction(editTaskData.id, formData); }
           else { await createTaskAction(formData); }
           onComplete();
         } finally { setIsSubmitting(false); }
@@ -41,18 +43,21 @@ export default function TaskCreateForm({ onComplete, editTaskData }: { onComplet
           <input name="taskTitle" type="text" required defaultValue={editTaskData?.taskTitle} style={inputStyle} />
         </div>
 
-        <div style={inputGroupStyle}>
-          <label style={labelStyle}>タイプ</label>
-          <div style={typeTabContainerStyle}>
-            {['DAILY', 'MULTI_DAY', 'SINGLE'].map(type => (
-              <button key={type} type="button" onClick={() => setTaskType(type)}
-                style={{ ...typeTabStyle, backgroundColor: taskType === type ? '#ededed' : '#171717', color: taskType === type ? '#0a0a0a' : '#fff' }}>
-                {type === 'DAILY' ? '毎日' : type === 'MULTI_DAY' ? '複数日' : '一回'}
-              </button>
-            ))}
-            <input type="hidden" name="taskType" value={taskType} />
+        {isHabitMode && (
+          <div style={inputGroupStyle}>
+            <label style={labelStyle}>習慣のタイプ</label>
+            <div style={typeTabContainerStyle}>
+              {['DAILY', 'MULTI_DAY'].map(type => (
+                <button key={type} type="button" onClick={() => setTaskType(type)}
+                  style={{ ...typeTabStyle, backgroundColor: taskType === type ? '#ededed' : '#171717', color: taskType === type ? '#0a0a0a' : '#fff' }}>
+                  {type === 'DAILY' ? '毎日' : '複数日'}
+                </button>
+              ))}
+              <input type="hidden" name="taskType" value={taskType} />
+            </div>
           </div>
-        </div>
+        )}
+        {!isHabitMode && <input type="hidden" name="taskType" value="SINGLE" />}
 
         <div style={detailSectionStyle}>
           {taskType === 'DAILY' && (
