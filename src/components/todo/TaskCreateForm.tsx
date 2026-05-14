@@ -14,11 +14,28 @@ const formatToLocalString = (date?: Date) => {
 export default function TaskCreateForm({ onComplete, editTaskData }: { onComplete: () => void; editTaskData?: any; }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [taskType, setTaskType] = useState(editTaskData?.taskType || "DAILY");
+  const [dailyCounts, setDailyCounts] = useState<{ [key: number]: number }>(
+    editTaskData?.habitDailySchedule || { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 }
+  );
 
   const daysOfWeek = [
     { label: '日', value: 0 }, { label: '月', value: 1 }, { label: '火', value: 2 },
     { label: '水', value: 3 }, { label: '木', value: 4 }, { label: '金', value: 5 }, { label: '土', value: 6 }
   ];
+
+  const incrementAllDays = () => {
+    setDailyCounts(prev => {
+      const next = { ...prev };
+      for (let i = 0; i < 7; i++) {
+        next[i] = (next[i] || 0) + 1;
+      }
+      return next;
+    });
+  };
+
+  const updateDailyCount = (day: number, val: number) => {
+    setDailyCounts(prev => ({ ...prev, [day]: val }));
+  };
 
   const isHabitMode = taskType === 'DAILY' || taskType === 'MULTI_DAY';
 
@@ -62,12 +79,22 @@ export default function TaskCreateForm({ onComplete, editTaskData }: { onComplet
         <div style={detailSectionStyle}>
           {taskType === 'DAILY' && (
             <div>
-              <label style={{ ...labelStyle, marginBottom: '12px' }}>曜日ごとの目標回数</label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <label style={{ ...labelStyle, marginBottom: 0 }}>曜日ごとの目標回数</label>
+                <button type="button" onClick={incrementAllDays} style={miniButtonStyle}>毎日+1</button>
+              </div>
               <div style={daysGridStyle}>
                 {daysOfWeek.map(day => (
                   <div key={day.value} style={dayInputItemStyle}>
                     <label style={smallLabelStyle}>{day.label}</label>
-                    <input name={`dailyCount_${day.value}`} type="number" min="0" defaultValue={editTaskData?.habitDailySchedule?.[day.value] || 0} style={smallInputStyle} />
+                    <input 
+                      name={`dailyCount_${day.value}`} 
+                      type="number" 
+                      min="0" 
+                      value={dailyCounts[day.value] || 0} 
+                      onChange={(e) => updateDailyCount(day.value, parseInt(e.target.value) || 0)}
+                      style={smallInputStyle} 
+                    />
                   </div>
                 ))}
               </div>
@@ -180,3 +207,4 @@ const halfInputStyle: React.CSSProperties = { flex: 1 };
 const buttonContainerStyle: React.CSSProperties = { display: 'flex', gap: '12px' };
 const submitButtonStyle: React.CSSProperties = { flex: 2, padding: '16px', borderRadius: '12px', border: 'none', backgroundColor: '#ededed', color: '#0a0a0a', fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer' };
 const cancelButtonStyle: React.CSSProperties = { flex: 1, padding: '16px', borderRadius: '12px', border: '1px solid #333', backgroundColor: 'transparent', color: '#fff', fontSize: '1rem', cursor: 'pointer' };
+const miniButtonStyle: React.CSSProperties = { padding: '4px 8px', borderRadius: '6px', border: 'none', backgroundColor: '#444', color: '#fff', fontSize: '0.7rem', cursor: 'pointer' };
