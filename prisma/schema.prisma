@@ -39,11 +39,32 @@ model TodoTask {
   // 並び順
   sortOrder               Int      @default(0)
 
+  // 報酬設定
+  rewardPoints            Int      @default(10)
+  rewardXP                Int      @default(10)
+
   // 通知設定（復活）
   notifications           TaskNotification[]
 
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
+}
+
+// ユーザーのステータス
+model UserProfile {
+  id            Int      @id @default(1)
+  points        Int      @default(0)
+  xp            Int      @default(0)
+  level         Int      @default(1)
+  updatedAt     DateTime @updatedAt
+}
+
+// ご褒美
+model Reward {
+  id          Int      @id @default(autoincrement())
+  title       String
+  pointsCost  Int
+  createdAt   DateTime @default(now())
 }
 
 // 通知時間のリスト（復活）

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import TaskCreateForm from './TaskCreateForm';
 import SortableTaskCard from './SortableTaskCard';
-import { updateTaskOrderAction } from '@/app/actions';
+import { updateTaskOrderAction, createRewardAction, deleteRewardAction, exchangeRewardAction } from '@/app/actions';
 
 import {
   DndContext, 
@@ -21,7 +21,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 
-export default function TodoClientContent({ initialTasks }: { initialTasks: any[] }) {
+export default function TodoClientContent({ initialTasks, userProfile, rewards }: { initialTasks: any[], userProfile: any, rewards: any[] }) {
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [editingTask, setEditingTask] = useState<any | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -44,8 +44,11 @@ export default function TodoClientContent({ initialTasks }: { initialTasks: any[
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
+  const xpToNextLevel = userProfile.level * 100;
+  const xpPercentage = Math.min(100, (userProfile.xp / xpToNextLevel) * 100);
+
   /**
-   * 【バグ修正】ドラッグ終了時の処理
+   * ドラッグ終了時の処理
    */
   const handleDragEnd = async (event: DragEndEvent, type: 'HABIT' | 'SINGLE') => {
     const { active, over } = event;
@@ -98,6 +101,23 @@ export default function TodoClientContent({ initialTasks }: { initialTasks: any[
 
   return (
     <>
+      <div style={statsContainerStyle}>
+        <div style={statItemStyle}>
+          <div style={statLabelStyle}>LEVEL</div>
+          <div style={statValueStyle}>{userProfile.level}</div>
+        </div>
+        <div style={xpContainerStyle}>
+          <div style={statLabelStyle}>XP: {userProfile.xp} / {xpToNextLevel}</div>
+          <div style={xpProgressBarBgStyle}>
+            <div style={{ ...xpProgressBarFillStyle, width: `${xpPercentage}%` }}></div>
+          </div>
+        </div>
+        <div style={statItemStyle}>
+          <div style={statLabelStyle}>POINTS</div>
+          <div style={statValueStyle}>🪙 {userProfile.points}</div>
+        </div>
+      </div>
+
       <div style={columnsContainerStyle}>
         
         <section style={columnStyle}>
@@ -126,6 +146,41 @@ export default function TodoClientContent({ initialTasks }: { initialTasks: any[
           </DndContext>
         </section>
 
+        <section style={columnStyle}>
+          <h2 style={sectionTitleStyle}>🎁 ご褒美</h2>
+          <div style={rewardSectionStyle}>
+            <form action={createRewardAction} style={rewardFormStyle}>
+              <input name="title" placeholder="ご褒美の名称" required style={rewardInputStyle} />
+              <input name="pointsCost" type="number" placeholder="必要P" required style={rewardPointsInputStyle} />
+              <button type="submit" style={rewardAddButtonStyle}>+</button>
+            </form>
+            <div style={rewardListStyle}>
+              {rewards.map((reward: any) => (
+                <div key={reward.id} style={rewardCardStyle}>
+                  <div style={rewardInfoStyle}>
+                    <div style={rewardTitleStyle}>{reward.title}</div>
+                    <div style={rewardCostStyle}>🪙 {reward.pointsCost} P</div>
+                  </div>
+                  <div style={rewardActionsStyle}>
+                    <button onClick={() => deleteRewardAction(reward.id)} style={rewardDeleteButtonStyle}>🗑️</button>
+                    <button 
+                      onClick={async () => {
+                        const res = await exchangeRewardAction(reward.id);
+                        if (!res.success) alert(res.error);
+                        else alert('交換しました！');
+                      }} 
+                      style={rewardExchangeButtonStyle}
+                      disabled={userProfile.points < reward.pointsCost}
+                    >
+                      交換
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
       </div>
 
       <button onClick={() => { setEditingTask(null); setIsFormVisible(true); }} style={floatingAddButtonStyle}>+</button>
@@ -134,8 +189,31 @@ export default function TodoClientContent({ initialTasks }: { initialTasks: any[
   );
 }
 
+const statsContainerStyle: React.CSSProperties = { display: 'flex', gap: '24px', backgroundColor: '#171717', padding: '20px', borderRadius: '16px', marginBottom: '32px', alignItems: 'center', border: '1px solid #333' };
+const statItemStyle: React.CSSProperties = { textAlign: 'center' };
+const statLabelStyle: React.CSSProperties = { fontSize: '0.65rem', opacity: 0.5, fontWeight: 'bold', marginBottom: '4px' };
+const statValueStyle: React.CSSProperties = { fontSize: '1.2rem', fontWeight: 'bold' };
+const xpContainerStyle: React.CSSProperties = { flex: 1 };
+const xpProgressBarBgStyle: React.CSSProperties = { height: '8px', backgroundColor: '#333', borderRadius: '4px', overflow: 'hidden', marginTop: '4px' };
+const xpProgressBarFillStyle: React.CSSProperties = { height: '100%', backgroundColor: '#4dff4d', transition: 'width 0.3s ease' };
+
 const columnsContainerStyle: React.CSSProperties = { display: 'flex', gap: '24px', flexWrap: 'wrap' };
 const columnStyle: React.CSSProperties = { flex: '1', minWidth: '320px' };
 const sectionTitleStyle: React.CSSProperties = { fontSize: '0.85rem', opacity: 0.5, marginBottom: '16px', fontWeight: 'bold' };
 const listStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '12px', paddingBottom: '100px' };
+
+const rewardSectionStyle: React.CSSProperties = { backgroundColor: '#171717', padding: '16px', borderRadius: '16px', border: '1px solid #333' };
+const rewardFormStyle: React.CSSProperties = { display: 'flex', gap: '8px', marginBottom: '16px' };
+const rewardInputStyle: React.CSSProperties = { flex: 2, padding: '8px', borderRadius: '8px', border: '1px solid #333', backgroundColor: '#0a0a0a', color: '#fff', fontSize: '0.85rem' };
+const rewardPointsInputStyle: React.CSSProperties = { flex: 1, padding: '8px', borderRadius: '8px', border: '1px solid #333', backgroundColor: '#0a0a0a', color: '#fff', fontSize: '0.85rem', width: '60px' };
+const rewardAddButtonStyle: React.CSSProperties = { padding: '8px 12px', borderRadius: '8px', border: 'none', backgroundColor: '#ededed', color: '#0a0a0a', fontWeight: 'bold', cursor: 'pointer' };
+const rewardListStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '8px' };
+const rewardCardStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', backgroundColor: '#222', borderRadius: '10px' };
+const rewardInfoStyle: React.CSSProperties = { flex: 1 };
+const rewardTitleStyle: React.CSSProperties = { fontSize: '0.9rem', fontWeight: 'bold' };
+const rewardCostStyle: React.CSSProperties = { fontSize: '0.75rem', color: '#ffd700' };
+const rewardActionsStyle: React.CSSProperties = { display: 'flex', gap: '8px' };
+const rewardExchangeButtonStyle: React.CSSProperties = { padding: '6px 12px', borderRadius: '6px', border: 'none', backgroundColor: '#4dff4d', color: '#000', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' };
+const rewardDeleteButtonStyle: React.CSSProperties = { backgroundColor: 'transparent', border: 'none', cursor: 'pointer', fontSize: '0.8rem', opacity: 0.5 };
+
 const floatingAddButtonStyle: React.CSSProperties = { position: 'fixed', bottom: '30px', right: '30px', width: '64px', height: '64px', borderRadius: '32px', backgroundColor: '#fff', color: '#000', fontSize: '28px', border: 'none', cursor: 'pointer', zIndex: 100, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' };
