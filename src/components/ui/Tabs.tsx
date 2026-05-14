@@ -45,8 +45,8 @@ const tabsContainerStyle: React.CSSProperties = {
   position: 'sticky',
   top: '10px',
   zIndex: 10,
-  maxWidth: '600px',
-  margin: '0 auto 24px auto',
+  width: '100%',
+  boxSizing: 'border-box',
 };
 
 const tabButtonStyle: React.CSSProperties = {

@@ -32,10 +32,6 @@ export default async function TodoMainPage() {
 
   return (
     <main style={mainContainerStyle}>
-      <header style={headerStyle}>
-        <h1 style={titleStyle}>My Tasks</h1>
-      </header>
-
       <TodoClientContent 
         initialTasks={JSON.parse(JSON.stringify(allTodoTasks))} 
         userProfile={JSON.parse(JSON.stringify(userProfile))}
@@ -45,6 +41,4 @@ export default async function TodoMainPage() {
   );
 }
 
-const mainContainerStyle: React.CSSProperties = { padding: '20px', maxWidth: '1000px', margin: '0 auto', minHeight: '100vh' };
-const headerStyle: React.CSSProperties = { padding: '40px 0 20px' };
-const titleStyle: React.CSSProperties = { fontSize: '2rem', fontWeight: 'bold' };
+const mainContainerStyle: React.CSSProperties = { margin: '0 auto', minHeight: '100vh' };

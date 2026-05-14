@@ -161,37 +161,35 @@ export default function TodoClientContent({ initialTasks, userProfile, rewards }
 
         {activeTab === 'REWARD' && (
           <section style={columnStyle}>
-            <div style={rewardSectionStyle}>
-              <form action={createRewardAction} style={rewardFormStyle}>
-                <input name="title" placeholder="ご褒美の名称" required style={rewardInputStyle} />
-                <input name="pointsCost" type="number" placeholder="必要P" required style={rewardPointsInputStyle} />
-                <button type="submit" style={rewardAddButtonStyle}>+</button>
-              </form>
-              <div style={rewardListStyle}>
-                {rewards.map((reward: any) => (
-                  <div key={reward.id} style={rewardCardStyle}>
-                    <div style={rewardInfoStyle}>
-                      <div style={rewardTitleStyle}>{reward.title}</div>
-                      <div style={rewardCostStyle}>🪙 {reward.pointsCost} P</div>
-                    </div>
-                    <div style={rewardActionsStyle}>
-                      <button onClick={() => handleDeleteReward(reward.id, reward.title)} style={rewardDeleteButtonStyle}>🗑️</button>
-                      <button 
-                        onClick={async () => {
-                          const res = await exchangeRewardAction(reward.id);
-                          if (!res.success) alert(res.error);
-                          else alert('交換しました！');
-                        }} 
-                        style={rewardExchangeButtonStyle}
-                        disabled={userProfile.points < reward.pointsCost}
-                      >
-                        交換
-                      </button>
-                    </div>
+            <form action={createRewardAction} style={rewardFormStyle}>
+              <input name="title" placeholder="ご褒美の名称" required style={rewardInputStyle} />
+              <input name="pointsCost" type="number" placeholder="必要P" required style={rewardPointsInputStyle} />
+              <button type="submit" style={rewardAddButtonStyle}>+</button>
+            </form>
+            <div style={listStyle}>
+              {rewards.map((reward: any) => (
+                <div key={reward.id} style={rewardCardStyle}>
+                  <div style={rewardInfoStyle}>
+                    <div style={rewardTitleStyle}>{reward.title}</div>
+                    <div style={rewardCostStyle}>🪙 {reward.pointsCost} P</div>
                   </div>
-                ))}
-                {rewards.length === 0 && <div style={emptyStateStyle}>ご褒美はまだありません</div>}
-              </div>
+                  <div style={rewardActionsStyle}>
+                    <button onClick={() => handleDeleteReward(reward.id, reward.title)} style={rewardDeleteButtonStyle}>🗑️</button>
+                    <button 
+                      onClick={async () => {
+                        const res = await exchangeRewardAction(reward.id);
+                        if (!res.success) alert(res.error);
+                        else alert('交換しました！');
+                      }} 
+                      style={rewardExchangeButtonStyle}
+                      disabled={userProfile.points < reward.pointsCost}
+                    >
+                      交換
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {rewards.length === 0 && <div style={emptyStateStyle}>ご褒美はまだありません</div>}
             </div>
           </section>
         )}
@@ -230,15 +228,13 @@ const columnStyle: React.CSSProperties = { width: '100%' };
 const listStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '12px', paddingBottom: '100px' };
 const emptyStateStyle: React.CSSProperties = { textAlign: 'center', padding: '40px 20px', opacity: 0.3, fontSize: '0.9rem' };
 
-const rewardSectionStyle: React.CSSProperties = { backgroundColor: '#171717', padding: '16px', borderRadius: '24px', border: '1px solid #333' };
-const rewardFormStyle: React.CSSProperties = { display: 'flex', gap: '8px', marginBottom: '16px' };
+const rewardFormStyle: React.CSSProperties = { display: 'flex', gap: '8px', marginBottom: '24px', padding: '12px', backgroundColor: '#171717', borderRadius: '14px', border: '1px solid #333' };
 const rewardInputStyle: React.CSSProperties = { flex: 2, padding: '10px', borderRadius: '8px', border: '1px solid #333', backgroundColor: '#0a0a0a', color: '#fff', fontSize: '0.85rem' };
 const rewardPointsInputStyle: React.CSSProperties = { flex: '0 0 80px', padding: '10px', borderRadius: '8px', border: '1px solid #333', backgroundColor: '#0a0a0a', color: '#fff', fontSize: '0.85rem' };
 const rewardAddButtonStyle: React.CSSProperties = { padding: '8px 16px', borderRadius: '8px', border: 'none', backgroundColor: '#ededed', color: '#0a0a0a', fontWeight: 'bold', cursor: 'pointer' };
-const rewardListStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '8px' };
-const rewardCardStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', backgroundColor: '#222', borderRadius: '12px' };
+const rewardCardStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', backgroundColor: '#171717', borderRadius: '14px', border: '1px solid #333' };
 const rewardInfoStyle: React.CSSProperties = { flex: 1, minWidth: 0, marginRight: '8px' };
-const rewardTitleStyle: React.CSSProperties = { fontSize: '0.9rem', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
+const rewardTitleStyle: React.CSSProperties = { fontSize: '1rem', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
 const rewardCostStyle: React.CSSProperties = { fontSize: '0.75rem', color: '#ffd700', marginTop: '2px' };
 const rewardActionsStyle: React.CSSProperties = { display: 'flex', gap: '8px' };
 const rewardExchangeButtonStyle: React.CSSProperties = { padding: '6px 12px', borderRadius: '6px', border: 'none', backgroundColor: '#4dff4d', color: '#000', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' };
