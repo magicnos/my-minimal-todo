@@ -117,13 +117,16 @@ export default function TodoClientContent({ initialTasks, userProfile, rewards }
 
   return (
     <div style={mainWrapperStyle}>
-      <button 
-        onClick={() => setIsSettingsVisible(true)} 
-        style={settingsButtonStyle}
-        title="設定"
-      >
-        ⚙️
-      </button>
+      <header style={headerStyle}>
+        <h1 style={appTitleStyle}>Minimal Todo</h1>
+        <button 
+          onClick={() => setIsSettingsVisible(true)} 
+          style={settingsButtonStyle}
+          title="設定"
+        >
+          ⚙️
+        </button>
+      </header>
 
       <div style={statsContainerStyle}>
         <div style={statItemStyle}>
@@ -240,17 +243,33 @@ const mainWrapperStyle: React.CSSProperties = {
   boxSizing: 'border-box'
 };
 
+const headerStyle: React.CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: '20px',
+  padding: '0 8px'
+};
+
+const appTitleStyle: React.CSSProperties = {
+  fontSize: '1.4rem',
+  fontWeight: 'bold',
+  color: '#fff',
+  margin: 0,
+  letterSpacing: '-0.02em'
+};
+
 const settingsButtonStyle: React.CSSProperties = {
-  position: 'absolute',
-  top: '20px',
-  right: '20px',
-  backgroundColor: 'transparent',
-  border: 'none',
+  backgroundColor: '#171717',
+  border: '1px solid #333',
+  borderRadius: '12px',
   fontSize: '1.2rem',
   cursor: 'pointer',
-  opacity: 0.5,
-  zIndex: 10,
-  padding: '10px'
+  padding: '8px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  transition: 'all 0.2s ease'
 };
 
 const statsContainerStyle: React.CSSProperties = { display: 'flex', gap: '24px', backgroundColor: '#171717', padding: '20px', borderRadius: '24px', marginBottom: '24px', alignItems: 'center', border: '1px solid #333' };
