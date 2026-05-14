@@ -203,7 +203,19 @@ export default function TodoClientContent({ initialTasks, userProfile, rewards }
   );
 }
 
-const mainWrapperStyle: React.CSSProperties = { maxWidth: '600px', margin: '20px auto', padding: '20px', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '32px', minHeight: '90vh', position: 'relative' };
+const mainWrapperStyle: React.CSSProperties = { 
+  width: '95%',
+  maxWidth: '600px', 
+  minWidth: '320px',
+  margin: '20px auto', 
+  padding: '20px', 
+  backgroundColor: '#0a0a0a', 
+  border: '1px solid #333', 
+  borderRadius: '32px', 
+  minHeight: '90vh', 
+  position: 'relative',
+  boxSizing: 'border-box'
+};
 
 const statsContainerStyle: React.CSSProperties = { display: 'flex', gap: '24px', backgroundColor: '#171717', padding: '20px', borderRadius: '24px', marginBottom: '24px', alignItems: 'center', border: '1px solid #333' };
 const statItemStyle: React.CSSProperties = { textAlign: 'center' };

@@ -50,8 +50,8 @@ const tabsContainerStyle: React.CSSProperties = {
 };
 
 const tabButtonStyle: React.CSSProperties = {
-  flex: '1 1 0',
-  minWidth: 0,
+  width: '33.33%',
+  flexShrink: 0,
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
@@ -62,6 +62,7 @@ const tabButtonStyle: React.CSSProperties = {
   cursor: 'pointer',
   transition: 'all 0.2s ease',
   gap: '6px',
+  overflow: 'hidden',
 };
 
 const tabIconStyle: React.CSSProperties = {
