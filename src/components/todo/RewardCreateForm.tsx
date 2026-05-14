@@ -17,11 +17,11 @@ export default function RewardCreateForm({ onComplete }: { onComplete: () => voi
       }}>
         <div style={inputGroupStyle}>
           <label style={labelStyle}>ご褒美の名称</label>
-          <input name="title" type="text" required placeholder="例: ケーキを食べる" style={inputStyle} />
+          <input name="title" type="text" required style={inputStyle} />
         </div>
         <div style={inputGroupStyle}>
           <label style={labelStyle}>必要ポイント</label>
-          <input name="pointsCost" type="number" required min="1" placeholder="例: 50" style={inputStyle} />
+          <input name="pointsCost" type="number" required min="1" style={inputStyle} />
         </div>
         <div style={buttonContainerStyle}>
           <button type="button" onClick={onComplete} style={cancelButtonStyle}>キャンセル</button>

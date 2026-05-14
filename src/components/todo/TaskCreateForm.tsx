@@ -126,13 +126,17 @@ export default function TaskCreateForm({ onComplete, editTaskData }: { onComplet
               <option value="HIGH">高</option>
             </select>
           </div>
-          <div style={halfInputStyle}>
-            <label style={labelStyle}>報酬タイミング</label>
-            <select name="rewardTiming" defaultValue={editTaskData?.rewardTiming || "EACH"} style={inputStyle}>
-              <option value="EACH">1回ごと</option>
-              <option value="TOTAL">全達成時</option>
-            </select>
-          </div>
+          {isHabitMode ? (
+            <div style={halfInputStyle}>
+              <label style={labelStyle}>報酬タイミング</label>
+              <select name="rewardTiming" defaultValue={editTaskData?.rewardTiming || "EACH"} style={inputStyle}>
+                <option value="EACH">1回ごと</option>
+                <option value="TOTAL">全達成時</option>
+              </select>
+            </div>
+          ) : (
+            <input type="hidden" name="rewardTiming" value="EACH" />
+          )}
         </div>
 
         <div style={rowStyle}>
