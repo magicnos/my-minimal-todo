@@ -5,7 +5,7 @@ import TaskCreateForm from './TaskCreateForm';
 import RewardCreateForm from './RewardCreateForm';
 import SettingsForm from './SettingsForm';
 import SortableTaskCard from './SortableTaskCard';
-import { updateTaskOrderAction, deleteRewardAction, exchangeRewardAction } from '@/app/actions';
+import { updateTaskOrderAction, deleteRewardAction, exchangeRewardAction, updateRewardOrderAction, updateRewardAction } from '@/app/actions';
 import Tabs from '@/components/ui/Tabs';
 
 import {
