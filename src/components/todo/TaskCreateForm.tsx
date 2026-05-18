@@ -49,7 +49,14 @@ export default function TaskCreateForm({ onComplete, editTaskData }: { onComplet
   };
 
   const updateDailyCount = (day: number, val: number) => {
-    setDailyCounts(prev => ({ ...prev, [day]: val }));
+    setDailyCounts(prev => {
+      const next = { ...prev, [day]: val };
+      const maxTarget = Math.max(...Object.values(next));
+      if (isMultiStage && stages.length > maxTarget) {
+        setStages(stages.slice(0, maxTarget || 1));
+      }
+      return next;
+    });
   };
 
   const addStage = () => setStages([...stages, { target: (stages[stages.length - 1]?.target || 0) + 1, xp: 10, points: 10 }]);

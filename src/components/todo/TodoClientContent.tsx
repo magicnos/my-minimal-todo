@@ -240,19 +240,20 @@ export default function TodoClientContent({ initialTasks, userProfile, rewards: 
     </div>
   );
 }
-
 const mainWrapperStyle: React.CSSProperties = { 
   width: '100%',
   maxWidth: '600px', 
   margin: '0 auto', 
-  padding: '16px', 
+  padding: '12px', 
   backgroundColor: '#0a0a0a', 
   border: '1px solid #333', 
   borderRadius: '0px', 
   minHeight: '100vh', 
   position: 'relative',
-  boxSizing: 'border-box'
+  boxSizing: 'border-box',
+  overflowX: 'hidden'
 };
+
 
 // Note: In a real app we'd use CSS modules or styled-components with media queries.
 // Here we are approximating responsiveness with flexWrap and relative widths.
@@ -290,17 +291,18 @@ const statsContainerStyle: React.CSSProperties = {
   display: 'flex', 
   gap: '12px', 
   backgroundColor: '#171717', 
-  padding: '16px', 
-  borderRadius: '24px', 
-  marginBottom: '24px', 
+  padding: '12px', 
+  borderRadius: '20px', 
+  marginBottom: '20px', 
   alignItems: 'center', 
   border: '1px solid #333',
-  flexWrap: 'wrap'
+  flexWrap: 'wrap',
+  justifyContent: 'space-between'
 };
-const statItemStyle: React.CSSProperties = { textAlign: 'center', minWidth: '60px' };
+const statItemStyle: React.CSSProperties = { textAlign: 'center', flex: '0 1 auto' };
 const statLabelStyle: React.CSSProperties = { fontSize: '0.6rem', opacity: 0.5, fontWeight: 'bold', marginBottom: '2px' };
-const statValueStyle: React.CSSProperties = { fontSize: '1rem', fontWeight: 'bold' };
-const xpContainerStyle: React.CSSProperties = { flex: 1, minWidth: '120px' };
+const statValueStyle: React.CSSProperties = { fontSize: '0.9rem', fontWeight: 'bold' };
+const xpContainerStyle: React.CSSProperties = { flex: '1 1 100%', order: 3, marginTop: '4px' };
 const xpProgressBarBgStyle: React.CSSProperties = { height: '8px', backgroundColor: '#333', borderRadius: '4px', overflow: 'hidden', marginTop: '4px' };
 const xpProgressBarFillStyle: React.CSSProperties = { height: '100%', backgroundColor: '#4dff4d', transition: 'width 0.3s ease' };
 
