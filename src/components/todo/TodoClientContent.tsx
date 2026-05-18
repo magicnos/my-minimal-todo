@@ -5,6 +5,7 @@ import TaskCreateForm from './TaskCreateForm';
 import RewardCreateForm from './RewardCreateForm';
 import SettingsForm from './SettingsForm';
 import SortableTaskCard from './SortableTaskCard';
+import SortableRewardCard from './SortableRewardCard';
 import { updateTaskOrderAction, deleteRewardAction, exchangeRewardAction, updateRewardOrderAction, updateRewardAction } from '@/app/actions';
 import Tabs from '@/components/ui/Tabs';
 
@@ -210,26 +211,18 @@ export default function TodoClientContent({ initialTasks, userProfile, rewards: 
               <SortableContext items={localRewards.map(r => r.id)} strategy={verticalListSortingStrategy}>
                 <div style={listStyle}>
                   {localRewards.map((reward: any) => (
-                    <div key={reward.id} style={rewardCardStyle}>
-                      <div style={rewardInfoStyle} onClick={() => { setEditingReward(reward); setIsRewardFormVisible(true); }}>
-                        <div style={rewardTitleStyle}>{reward.title}</div>
-                        <div style={rewardCostStyle}>🪙 {reward.pointsCost} P</div>
-                      </div>
-                      <div style={rewardActionsStyle}>
-                        <button onClick={() => handleDeleteReward(reward.id, reward.title)} style={rewardDeleteButtonStyle}>🗑️</button>
-                        <button 
-                          onClick={async () => {
-                            const res = await exchangeRewardAction(reward.id);
-                            if (!res.success) alert(res.error);
-                            else alert(`「${res.title}」を交換しました！`);
-                          }} 
-                          style={rewardExchangeButtonStyle}
-                          disabled={userProfile.points < reward.pointsCost}
-                        >
-                          交換
-                        </button>
-                      </div>
-                    </div>
+                    <SortableRewardCard 
+                      key={reward.id} 
+                      reward={reward} 
+                      userPoints={userProfile.points}
+                      onEdit={(r) => { setEditingReward(r); setIsRewardFormVisible(true); }}
+                      onDelete={handleDeleteReward}
+                      onExchange={async (id) => {
+                        const res = await exchangeRewardAction(id);
+                        if (!res.success) alert(res.error);
+                        else alert(`「${res.title}」を交換しました！`);
+                      }}
+                    />
                   ))}
                   {localRewards.length === 0 && <div style={emptyStateStyle}>ご褒美はまだありません</div>}
                 </div>
@@ -249,18 +242,20 @@ export default function TodoClientContent({ initialTasks, userProfile, rewards: 
 }
 
 const mainWrapperStyle: React.CSSProperties = { 
-  width: '95%',
+  width: '100%',
   maxWidth: '600px', 
-  minWidth: '320px',
-  margin: '20px auto', 
-  padding: '20px', 
+  margin: '0 auto', 
+  padding: '16px', 
   backgroundColor: '#0a0a0a', 
   border: '1px solid #333', 
-  borderRadius: '32px', 
-  minHeight: '90vh', 
+  borderRadius: '0px', 
+  minHeight: '100vh', 
   position: 'relative',
   boxSizing: 'border-box'
 };
+
+// Note: In a real app we'd use CSS modules or styled-components with media queries.
+// Here we are approximating responsiveness with flexWrap and relative widths.
 
 const headerStyle: React.CSSProperties = {
   display: 'flex',
@@ -291,11 +286,21 @@ const settingsButtonStyle: React.CSSProperties = {
   transition: 'all 0.2s ease'
 };
 
-const statsContainerStyle: React.CSSProperties = { display: 'flex', gap: '24px', backgroundColor: '#171717', padding: '20px', borderRadius: '24px', marginBottom: '24px', alignItems: 'center', border: '1px solid #333' };
-const statItemStyle: React.CSSProperties = { textAlign: 'center' };
-const statLabelStyle: React.CSSProperties = { fontSize: '0.65rem', opacity: 0.5, fontWeight: 'bold', marginBottom: '4px' };
-const statValueStyle: React.CSSProperties = { fontSize: '1.2rem', fontWeight: 'bold' };
-const xpContainerStyle: React.CSSProperties = { flex: 1 };
+const statsContainerStyle: React.CSSProperties = { 
+  display: 'flex', 
+  gap: '12px', 
+  backgroundColor: '#171717', 
+  padding: '16px', 
+  borderRadius: '24px', 
+  marginBottom: '24px', 
+  alignItems: 'center', 
+  border: '1px solid #333',
+  flexWrap: 'wrap'
+};
+const statItemStyle: React.CSSProperties = { textAlign: 'center', minWidth: '60px' };
+const statLabelStyle: React.CSSProperties = { fontSize: '0.6rem', opacity: 0.5, fontWeight: 'bold', marginBottom: '2px' };
+const statValueStyle: React.CSSProperties = { fontSize: '1rem', fontWeight: 'bold' };
+const xpContainerStyle: React.CSSProperties = { flex: 1, minWidth: '120px' };
 const xpProgressBarBgStyle: React.CSSProperties = { height: '8px', backgroundColor: '#333', borderRadius: '4px', overflow: 'hidden', marginTop: '4px' };
 const xpProgressBarFillStyle: React.CSSProperties = { height: '100%', backgroundColor: '#4dff4d', transition: 'width 0.3s ease' };
 
@@ -307,13 +312,5 @@ const emptyStateStyle: React.CSSProperties = { textAlign: 'center', padding: '40
 const sortButtonContainerStyle: React.CSSProperties = { display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' };
 const sortButtonStyle: React.CSSProperties = { padding: '6px 12px', borderRadius: '8px', border: '1px solid #333', backgroundColor: 'transparent', color: '#888', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold', transition: 'all 0.2s ease' };
 const activeSortButtonStyle: React.CSSProperties = { ...sortButtonStyle, backgroundColor: '#333', color: '#fff', borderColor: '#444' };
-
-const rewardCardStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', backgroundColor: '#171717', borderRadius: '14px', border: '1px solid #333' };
-const rewardInfoStyle: React.CSSProperties = { flex: 1, minWidth: 0, marginRight: '8px' };
-const rewardTitleStyle: React.CSSProperties = { fontSize: '1rem', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
-const rewardCostStyle: React.CSSProperties = { fontSize: '0.75rem', color: '#ffd700', marginTop: '2px' };
-const rewardActionsStyle: React.CSSProperties = { display: 'flex', gap: '8px' };
-const rewardExchangeButtonStyle: React.CSSProperties = { padding: '6px 12px', borderRadius: '6px', border: 'none', backgroundColor: '#4dff4d', color: '#000', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' };
-const rewardDeleteButtonStyle: React.CSSProperties = { backgroundColor: 'transparent', border: 'none', cursor: 'pointer', fontSize: '0.8rem', opacity: 0.5 };
 
 const floatingAddButtonStyle: React.CSSProperties = { position: 'absolute', bottom: '30px', right: '30px', width: '64px', height: '64px', borderRadius: '32px', backgroundColor: '#fff', color: '#000', fontSize: '28px', border: 'none', cursor: 'pointer', zIndex: 100, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' };

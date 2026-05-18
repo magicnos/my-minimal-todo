@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import PasswordLockGuard from "@/components/ui/PasswordLockGuard";
@@ -17,6 +17,13 @@ export const metadata: Metadata = {
   title: "My Minimal Todo",
   description: "自分専用のシンプルなTODOリスト",
   manifest: "/manifest.json",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({

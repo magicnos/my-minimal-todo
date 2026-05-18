@@ -90,9 +90,12 @@ export default function SortableTaskCard({
           🗑️
         </button>
         <button 
-          onClick={(e) => {
+          onClick={async (e) => {
             e.stopPropagation();
-            completeTaskAction(task.id, current);
+            await completeTaskAction(task.id, current);
+            if (task.taskType === 'SINGLE') {
+              alert(`「${task.taskTitle}」を達成しました！お疲れ様です！`);
+            }
           }} 
           disabled={isDone && task.taskType === 'SINGLE'} 
           style={completeButtonStyle}
