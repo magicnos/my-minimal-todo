@@ -35,9 +35,17 @@ export default function SortableTaskCard({
   };
 
   const { isDone, target, current } = getTaskStatus(task);
+  const isExpired = task.taskType === 'SINGLE' && new Date(task.taskDeadline) < new Date() && !isDone;
+
+  const cardStyle = {
+    ...taskCardStyle,
+    ...style,
+    borderColor: isExpired ? '#ff4d4d' : '#333',
+    boxShadow: isExpired ? '0 0 10px rgba(255, 77, 77, 0.3)' : 'none',
+  };
 
   return (
-    <div ref={setNodeRef} style={{ ...taskCardStyle, ...style }}>
+    <div ref={setNodeRef} style={cardStyle}>
       {/* ドラッグ用のハンドル（つまみ） */}
       <div {...attributes} {...listeners} style={dragHandleStyle}>
         ⣿
@@ -46,8 +54,11 @@ export default function SortableTaskCard({
       <div style={taskContentStyle} onClick={() => onEdit(task)}>
         <div style={taskHeaderStyle}>
           <span style={getPriorityBadgeStyle(task.taskPriority)}>{task.taskPriority}</span>
+          {task.taskType !== 'SINGLE' && target > 0 && (
+            <span style={progressInfoStyle}>{current}/{target}</span>
+          )}
+          <span style={rewardBadgeStyle}>{task.rewardXP}XP / {task.rewardPoints}P</span>
           {isDone && target > 0 && <span style={doneBadgeStyle}>✅</span>}
-          <span style={rewardBadgeStyle}>✨ {task.rewardXP} XP / 🪙 {task.rewardPoints} P</span>
         </div>
         <h3 style={taskTitleStyle}>{task.taskTitle}</h3>
         <div style={timeInfoStyle}>
@@ -55,10 +66,20 @@ export default function SortableTaskCard({
           : task.taskType === 'MULTI_DAY' ? `${['日','月','火','水','木','金','土'][task.habitStartDay]} ${task.habitStartTime} 〜 ${['日','月','火','水','木','金','土'][task.habitEndDay]} ${task.habitEndTime}`
           : '毎日'}
         </div>
-        {task.taskType !== 'SINGLE' && target > 0 && <div style={progressStyle}>{current} / {target}</div>}
       </div>
       
       <div style={actionButtonsStyle}>
+        {task.taskType !== 'SINGLE' && current > 0 && (
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              if (confirm('達成をキャンセルしますか？')) completeTaskAction(task.id, current, true);
+            }} 
+            style={cancelButtonStyle}
+          >
+            ↩️
+          </button>
+        )}
         <button 
           onClick={(e) => {
             e.stopPropagation();
@@ -73,7 +94,7 @@ export default function SortableTaskCard({
             e.stopPropagation();
             completeTaskAction(task.id, current);
           }} 
-          disabled={isDone} 
+          disabled={isDone && task.taskType === 'SINGLE'} 
           style={completeButtonStyle}
         >
           {isDone ? '●' : '✓'}
@@ -84,16 +105,17 @@ export default function SortableTaskCard({
 }
 
 // --- デザイン ---
-const taskCardStyle: React.CSSProperties = { padding: '12px', borderRadius: '14px', backgroundColor: '#171717', border: '1px solid #333', display: 'flex', alignItems: 'center', gap: '10px', touchAction: 'none' };
-const dragHandleStyle: React.CSSProperties = { cursor: 'grab', color: '#444', fontSize: '1.2rem', padding: '0 4px', userSelect: 'none' };
-const taskContentStyle: React.CSSProperties = { flex: 1, cursor: 'pointer' };
-const taskHeaderStyle: React.CSSProperties = { display: 'flex', gap: '6px', alignItems: 'center', marginBottom: '4px', flexWrap: 'wrap' };
-const taskTitleStyle: React.CSSProperties = { fontSize: '1rem', fontWeight: 'bold' };
+const taskCardStyle: React.CSSProperties = { padding: '12px', borderRadius: '14px', backgroundColor: '#171717', border: '1px solid #333', display: 'flex', alignItems: 'center', gap: '10px' };
+const dragHandleStyle: React.CSSProperties = { cursor: 'grab', color: '#444', fontSize: '1.2rem', padding: '0 4px', userSelect: 'none', touchAction: 'none' };
+const taskContentStyle: React.CSSProperties = { flex: 1, cursor: 'pointer', minWidth: 0 };
+const taskHeaderStyle: React.CSSProperties = { display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '4px', flexWrap: 'wrap', fontSize: '0.65rem' };
+const taskTitleStyle: React.CSSProperties = { fontSize: '1rem', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
 const timeInfoStyle: React.CSSProperties = { fontSize: '0.7rem', opacity: 0.5 };
-const progressStyle: React.CSSProperties = { fontSize: '0.75rem', color: '#4dff4d', marginTop: '4px', fontWeight: 'bold' };
+const progressInfoStyle: React.CSSProperties = { color: '#4dff4d', fontWeight: 'bold' };
 const doneBadgeStyle: React.CSSProperties = { fontSize: '0.8rem' };
-const rewardBadgeStyle: React.CSSProperties = { fontSize: '0.65rem', color: '#ffd700', opacity: 0.9 };
-const getPriorityBadgeStyle = (p: string) => ({ fontSize: '0.6rem', padding: '1px 5px', borderRadius: '3px', backgroundColor: p === 'HIGH' ? '#ff4d4d' : p === 'MEDIUM' ? '#ffa500' : '#4dff4d', color: '#000' });
+const rewardBadgeStyle: React.CSSProperties = { color: '#ffd700', opacity: 0.9 };
+const getPriorityBadgeStyle = (p: string) => ({ padding: '1px 5px', borderRadius: '3px', backgroundColor: p === 'HIGH' ? '#ff4d4d' : p === 'MEDIUM' ? '#ffa500' : '#4dff4d', color: '#000', fontWeight: 'bold' as const });
 const actionButtonsStyle: React.CSSProperties = { display: 'flex', gap: '8px' };
 const completeButtonStyle: React.CSSProperties = { width: '40px', height: '40px', borderRadius: '20px', border: '1px solid #333', backgroundColor: 'transparent', color: '#4dff4d', fontSize: '1.1rem', cursor: 'pointer' };
 const deleteButtonStyle: React.CSSProperties = { width: '32px', height: '32px', borderRadius: '16px', border: 'none', backgroundColor: 'transparent', color: '#ff4d4d', fontSize: '1rem', cursor: 'pointer', opacity: 0.6 };
+const cancelButtonStyle: React.CSSProperties = { width: '32px', height: '32px', borderRadius: '16px', border: 'none', backgroundColor: 'transparent', color: '#888', fontSize: '1rem', cursor: 'pointer', opacity: 0.8 };

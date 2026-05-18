@@ -18,6 +18,11 @@ export default function TaskCreateForm({ onComplete, editTaskData }: { onComplet
     editTaskData?.habitDailySchedule || { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 }
   );
 
+  const [isMultiStage, setIsMultiStage] = useState(editTaskData?.isMultiStage || false);
+  const [stages, setStages] = useState<{ target: number; xp: number; points: number }[]>(
+    editTaskData?.stages || [{ target: 1, xp: 10, points: 10 }]
+  );
+
   const daysOfWeek = [
     { label: '日', value: 0 }, { label: '月', value: 1 }, { label: '火', value: 2 },
     { label: '水', value: 3 }, { label: '木', value: 4 }, { label: '金', value: 5 }, { label: '土', value: 6 }
@@ -47,6 +52,14 @@ export default function TaskCreateForm({ onComplete, editTaskData }: { onComplet
     setDailyCounts(prev => ({ ...prev, [day]: val }));
   };
 
+  const addStage = () => setStages([...stages, { target: (stages[stages.length - 1]?.target || 0) + 1, xp: 10, points: 10 }]);
+  const removeStage = (idx: number) => setStages(stages.filter((_, i) => i !== idx));
+  const updateStage = (idx: number, key: string, val: number) => {
+    const next = [...stages];
+    (next[idx] as any)[key] = val;
+    setStages(next);
+  };
+
   const isHabitMode = taskType === 'DAILY' || taskType === 'MULTI_DAY';
 
   return (
@@ -58,6 +71,9 @@ export default function TaskCreateForm({ onComplete, editTaskData }: { onComplet
         if (taskType === 'SINGLE' && formData.get('taskDeadline')) {
           formData.set('taskDeadline', new Date(formData.get('taskDeadline') as string).toISOString());
         }
+        formData.set('isMultiStage', isMultiStage.toString());
+        formData.set('stages', JSON.stringify(stages));
+
         try {
           if (editTaskData?.id) { await updateTaskAction(editTaskData.id, formData); }
           else { await createTaskAction(formData); }
@@ -179,15 +195,45 @@ export default function TaskCreateForm({ onComplete, editTaskData }: { onComplet
           )}
         </div>
 
-        <div style={rowStyle}>
-          <div style={halfInputStyle}>
-            <label style={labelStyle}>獲得XP</label>
-            <input name="rewardXP" type="number" min="0" defaultValue={editTaskData?.rewardXP || 10} style={inputStyle} />
+        <div style={{ ...inputGroupStyle, backgroundColor: '#1a1a1a', padding: '12px', borderRadius: '12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <label style={{ ...labelStyle, marginBottom: 0 }}>段階別報酬</label>
+            <input type="checkbox" checked={isMultiStage} onChange={(e) => setIsMultiStage(e.target.checked)} />
           </div>
-          <div style={halfInputStyle}>
-            <label style={labelStyle}>獲得ポイント</label>
-            <input name="rewardPoints" type="number" min="0" defaultValue={editTaskData?.rewardPoints || 10} style={inputStyle} />
-          </div>
+
+          {isMultiStage ? (
+            <div>
+              {stages.map((stage, idx) => (
+                <div key={idx} style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'flex-end' }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={smallLabelStyle}>目標</label>
+                    <input type="number" min="1" value={stage.target} onChange={(e) => updateStage(idx, 'target', parseInt(e.target.value) || 0)} style={smallInputStyle} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={smallLabelStyle}>XP</label>
+                    <input type="number" min="0" value={stage.xp} onChange={(e) => updateStage(idx, 'xp', parseInt(e.target.value) || 0)} style={smallInputStyle} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={smallLabelStyle}>ポイント</label>
+                    <input type="number" min="0" value={stage.points} onChange={(e) => updateStage(idx, 'points', parseInt(e.target.value) || 0)} style={smallInputStyle} />
+                  </div>
+                  <button type="button" onClick={() => removeStage(idx)} style={{ ...miniButtonStyle, backgroundColor: '#ff4d4d' }}>×</button>
+                </div>
+              ))}
+              <button type="button" onClick={addStage} style={{ ...miniButtonStyle, width: '100%', marginTop: '4px' }}>+ 段階を追加</button>
+            </div>
+          ) : (
+            <div style={rowStyle}>
+              <div style={halfInputStyle}>
+                <label style={labelStyle}>獲得XP</label>
+                <input name="rewardXP" type="number" min="0" defaultValue={editTaskData?.rewardXP ?? 10} style={inputStyle} />
+              </div>
+              <div style={halfInputStyle}>
+                <label style={labelStyle}>獲得ポイント</label>
+                <input name="rewardPoints" type="number" min="0" defaultValue={editTaskData?.rewardPoints ?? 10} style={inputStyle} />
+              </div>
+            </div>
+          )}
         </div>
 
         <div style={inputGroupStyle}>

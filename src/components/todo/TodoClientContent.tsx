@@ -24,20 +24,26 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 
-export default function TodoClientContent({ initialTasks, userProfile, rewards }: { initialTasks: any[], userProfile: any, rewards: any[] }) {
+export default function TodoClientContent({ initialTasks, userProfile, rewards: initialRewards }: { initialTasks: any[], userProfile: any, rewards: any[] }) {
   const [activeTab, setActiveTab] = useState('HABIT');
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [isRewardFormVisible, setIsRewardFormVisible] = useState(false);
   const [isSettingsVisible, setIsSettingsVisible] = useState(false);
   const [editingTask, setEditingTask] = useState<any | null>(null);
+  const [editingReward, setEditingReward] = useState<any | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [singleSortMode, setSingleSortMode] = useState<'SORT_ORDER' | 'DEADLINE'>('SORT_ORDER');
 
   const [localTasks, setLocalTasks] = useState([...initialTasks].sort((a, b) => a.sortOrder - b.sortOrder));
+  const [localRewards, setLocalRewards] = useState([...initialRewards].sort((a, b) => a.sortOrder - b.sortOrder));
 
   useEffect(() => {
     setLocalTasks([...initialTasks].sort((a, b) => a.sortOrder - b.sortOrder));
   }, [initialTasks]);
+
+  useEffect(() => {
+    setLocalRewards([...initialRewards].sort((a, b) => a.sortOrder - b.sortOrder));
+  }, [initialRewards]);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 30000);
@@ -53,9 +59,18 @@ export default function TodoClientContent({ initialTasks, userProfile, rewards }
   const xpToNextLevel = userProfile.level * xpScaling;
   const xpPercentage = Math.min(100, (userProfile.xp / xpToNextLevel) * 100);
 
-  const handleDragEnd = async (event: DragEndEvent, type: 'HABIT' | 'SINGLE') => {
+  const handleDragEnd = async (event: DragEndEvent, type: 'HABIT' | 'SINGLE' | 'REWARD') => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
+
+    if (type === 'REWARD') {
+      const oldIndex = localRewards.findIndex(r => r.id === active.id);
+      const newIndex = localRewards.findIndex(r => r.id === over.id);
+      const newRewards = arrayMove(localRewards, oldIndex, newIndex);
+      setLocalRewards(newRewards);
+      await updateRewardOrderAction(newRewards.map(r => r.id));
+      return;
+    }
 
     const relevantTasks = type === 'HABIT' 
       ? localTasks.filter(t => t.taskType !== 'SINGLE')
@@ -77,7 +92,7 @@ export default function TodoClientContent({ initialTasks, userProfile, rewards }
   };
 
   const getTaskStatus = (task: any) => {
-    if (task.taskType === 'SINGLE') return { isDone: false, target: 1, current: 0 };
+    if (task.taskType === 'SINGLE') return { isDone: task.completedCount >= 1, target: 1, current: task.completedCount };
     let target = task.habitTargetCount || 1;
     let effectiveCount = task.completedCount;
     const lastDone = task.lastCompletedAt ? new Date(task.lastCompletedAt) : null;
@@ -191,39 +206,43 @@ export default function TodoClientContent({ initialTasks, userProfile, rewards }
 
         {activeTab === 'REWARD' && (
           <section style={columnStyle}>
-            <div style={listStyle}>
-              {rewards.map((reward: any) => (
-                <div key={reward.id} style={rewardCardStyle}>
-                  <div style={rewardInfoStyle}>
-                    <div style={rewardTitleStyle}>{reward.title}</div>
-                    <div style={rewardCostStyle}>🪙 {reward.pointsCost} P</div>
-                  </div>
-                  <div style={rewardActionsStyle}>
-                    <button onClick={() => handleDeleteReward(reward.id, reward.title)} style={rewardDeleteButtonStyle}>🗑️</button>
-                    <button 
-                      onClick={async () => {
-                        const res = await exchangeRewardAction(reward.id);
-                        if (!res.success) alert(res.error);
-                        else alert('交換しました！');
-                      }} 
-                      style={rewardExchangeButtonStyle}
-                      disabled={userProfile.points < reward.pointsCost}
-                    >
-                      交換
-                    </button>
-                  </div>
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleDragEnd(e, 'REWARD')}>
+              <SortableContext items={localRewards.map(r => r.id)} strategy={verticalListSortingStrategy}>
+                <div style={listStyle}>
+                  {localRewards.map((reward: any) => (
+                    <div key={reward.id} style={rewardCardStyle}>
+                      <div style={rewardInfoStyle} onClick={() => { setEditingReward(reward); setIsRewardFormVisible(true); }}>
+                        <div style={rewardTitleStyle}>{reward.title}</div>
+                        <div style={rewardCostStyle}>🪙 {reward.pointsCost} P</div>
+                      </div>
+                      <div style={rewardActionsStyle}>
+                        <button onClick={() => handleDeleteReward(reward.id, reward.title)} style={rewardDeleteButtonStyle}>🗑️</button>
+                        <button 
+                          onClick={async () => {
+                            const res = await exchangeRewardAction(reward.id);
+                            if (!res.success) alert(res.error);
+                            else alert(`「${res.title}」を交換しました！`);
+                          }} 
+                          style={rewardExchangeButtonStyle}
+                          disabled={userProfile.points < reward.pointsCost}
+                        >
+                          交換
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  {localRewards.length === 0 && <div style={emptyStateStyle}>ご褒美はまだありません</div>}
                 </div>
-              ))}
-              {rewards.length === 0 && <div style={emptyStateStyle}>ご褒美はまだありません</div>}
-            </div>
-            <button onClick={() => setIsRewardFormVisible(true)} style={floatingAddButtonStyle}>+</button>
+              </SortableContext>
+            </DndContext>
+            <button onClick={() => { setEditingReward(null); setIsRewardFormVisible(true); }} style={floatingAddButtonStyle}>+</button>
           </section>
         )}
 
       </div>
 
       {isFormVisible && <TaskCreateForm onComplete={() => { setIsFormVisible(false); setEditingTask(null); }} editTaskData={editingTask} />}
-      {isRewardFormVisible && <RewardCreateForm onComplete={() => setIsRewardFormVisible(false)} />}
+      {isRewardFormVisible && <RewardCreateForm onComplete={() => { setIsRewardFormVisible(false); setEditingReward(null); }} editData={editingReward} />}
       {isSettingsVisible && <SettingsForm onComplete={() => setIsSettingsVisible(false)} initialData={userProfile} />}
     </div>
   );

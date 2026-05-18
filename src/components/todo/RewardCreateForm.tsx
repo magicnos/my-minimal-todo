@@ -1,31 +1,35 @@
 'use client';
 
-import { createRewardAction } from '@/app/actions';
+import { createRewardAction, updateRewardAction } from '@/app/actions';
 import { useState } from 'react';
 import Modal from '@/components/ui/Modal';
 
-export default function RewardCreateForm({ onComplete }: { onComplete: () => void }) {
+export default function RewardCreateForm({ onComplete, editData }: { onComplete: () => void, editData?: any }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   return (
-    <Modal onClose={onComplete} title="ご褒美の追加">
+    <Modal onClose={onComplete} title={editData ? "ご褒美の編集" : "ご褒美の追加"}>
       <form action={async (formData) => {
         setIsSubmitting(true);
-        await createRewardAction(formData);
+        if (editData) {
+          await updateRewardAction(editData.id, formData);
+        } else {
+          await createRewardAction(formData);
+        }
         setIsSubmitting(false);
         onComplete();
       }}>
         <div style={inputGroupStyle}>
           <label style={labelStyle}>ご褒美の名称</label>
-          <input name="title" type="text" required style={inputStyle} />
+          <input name="title" type="text" required defaultValue={editData?.title} style={inputStyle} />
         </div>
         <div style={inputGroupStyle}>
           <label style={labelStyle}>必要ポイント</label>
-          <input name="pointsCost" type="number" required min="1" style={inputStyle} />
+          <input name="pointsCost" type="number" required min="0" defaultValue={editData?.pointsCost ?? 0} style={inputStyle} />
         </div>
         <div style={buttonContainerStyle}>
           <button type="button" onClick={onComplete} style={cancelButtonStyle}>キャンセル</button>
-          <button type="submit" disabled={isSubmitting} style={submitButtonStyle}>追加する</button>
+          <button type="submit" disabled={isSubmitting} style={submitButtonStyle}>{editData ? "更新する" : "追加する"}</button>
         </div>
       </form>
     </Modal>

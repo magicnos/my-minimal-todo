@@ -44,6 +44,10 @@ model TodoTask {
   rewardXP                Int      @default(10)
   rewardTiming            String   @default("EACH") // EACH (一回ごと), TOTAL (全達成時)
 
+  // 段階別報酬
+  isMultiStage            Boolean  @default(false)
+  stages                  Json?    // { target: number, xp: number, points: number }[]
+
   // 通知設定（復活）
   notifications           TaskNotification[]
 
@@ -66,6 +70,7 @@ model Reward {
   id          Int      @id @default(autoincrement())
   title       String
   pointsCost  Int
+  sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
 }
 
