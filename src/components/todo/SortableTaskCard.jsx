@@ -40,6 +40,23 @@ export default function SortableTaskCard({
     boxShadow: isExpired ? '0 0 10px rgba(255, 77, 77, 0.3)' : 'none',
   };
 
+  const handleComplete = async (e) => {
+    e.stopPropagation();
+    
+    // 一回きりタスクの場合は確認ダイアログを出す
+    if (task.taskType === 'SINGLE') {
+      if (!window.confirm(`「${task.taskTitle}」を達成にしてもよろしいですか？（達成するとリストから消えます）`)) {
+        return;
+      }
+    }
+
+    await completeTaskAction(task.id, current);
+    
+    if (task.taskType === 'SINGLE') {
+      alert(`「${task.taskTitle}」を達成しました！お疲れ様です！`);
+    }
+  };
+
   return (
     <div ref={setNodeRef} style={cardStyle}>
       {/* ドラッグ用のハンドル（つまみ） */}
@@ -50,8 +67,8 @@ export default function SortableTaskCard({
       <div style={taskContentStyle} onClick={() => onEdit(task)}>
         <div style={taskHeaderStyle}>
           <span style={getPriorityBadgeStyle(task.taskPriority)}>{task.taskPriority}</span>
-          {task.taskType !== 'SINGLE' && target > 0 && (
-            <span style={progressInfoStyle}>{current}/{target}</span>
+          {task.taskType !== 'SINGLE' && (
+            <span style={progressInfoStyle}>{current}/{target > 0 ? target : '-'}</span>
           )}
           <span style={rewardBadgeStyle}>{task.rewardXP}XP / {task.rewardPoints}P</span>
           {isDone && target > 0 && <span style={doneBadgeStyle}>✅</span>}
@@ -72,6 +89,7 @@ export default function SortableTaskCard({
               if (confirm('達成をキャンセルしますか？')) completeTaskAction(task.id, current, true);
             }} 
             style={cancelButtonStyle}
+            title="達成を戻す"
           >
             ↩️
           </button>
@@ -82,21 +100,20 @@ export default function SortableTaskCard({
             if (confirm('このタスクを削除しますか？')) deleteTaskAction(task.id);
           }} 
           style={deleteButtonStyle}
+          title="削除"
         >
           🗑️
         </button>
         <button 
-          onClick={async (e) => {
-            e.stopPropagation();
-            await completeTaskAction(task.id, current);
-            if (task.taskType === 'SINGLE') {
-              alert(`「${task.taskTitle}」を達成しました！お疲れ様です！`);
-            }
-          }} 
-          disabled={isDone && task.taskType === 'SINGLE'} 
-          style={completeButtonStyle}
+          onClick={handleComplete} 
+          style={{
+            ...completeButtonStyle,
+            backgroundColor: isDone ? '#4dff4d' : 'transparent',
+            color: isDone ? '#000' : '#4dff4d'
+          }}
+          title={task.taskType === 'SINGLE' ? "達成する" : "カウントを増やす"}
         >
-          {isDone ? '●' : '✓'}
+          ✓
         </button>
       </div>
     </div>

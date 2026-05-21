@@ -5,13 +5,13 @@
 
 export const styles = {
   mainWrapper: { 
-    width: '100%',
-    maxWidth: '600px', 
+    width: '100vw',
+    maxWidth: '480px', 
     margin: '0 auto', 
-    padding: '12px', 
+    padding: '16px', 
     backgroundColor: '#0a0a0a', 
-    border: '1px solid #333', 
-    borderRadius: '0px', 
+    borderLeft: '1px solid #333', 
+    borderRight: '1px solid #333',
     minHeight: '100vh', 
     position: 'relative',
     boxSizing: 'border-box',
