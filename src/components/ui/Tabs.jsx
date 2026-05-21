@@ -2,19 +2,7 @@
 
 import React from 'react';
 
-interface Tab {
-  id: string;
-  label: string;
-  icon?: string;
-}
-
-interface TabsProps {
-  tabs: Tab[];
-  activeTab: string;
-  onChange: (id: string) => void;
-}
-
-export default function Tabs({ tabs, activeTab, onChange }: TabsProps) {
+export default function Tabs({ tabs, activeTab, onChange }) {
   return (
     <div style={tabsContainerStyle}>
       {tabs.map((tab) => (
@@ -35,7 +23,7 @@ export default function Tabs({ tabs, activeTab, onChange }: TabsProps) {
   );
 }
 
-const tabsContainerStyle: React.CSSProperties = {
+const tabsContainerStyle = {
   display: 'flex',
   backgroundColor: '#171717',
   padding: '8px',
@@ -49,7 +37,7 @@ const tabsContainerStyle: React.CSSProperties = {
   boxSizing: 'border-box',
 };
 
-const tabButtonStyle: React.CSSProperties = {
+const tabButtonStyle = {
   width: '33.33%',
   flexShrink: 0,
   display: 'flex',
@@ -65,11 +53,11 @@ const tabButtonStyle: React.CSSProperties = {
   overflow: 'hidden',
 };
 
-const tabIconStyle: React.CSSProperties = {
+const tabIconStyle = {
   fontSize: '1.2rem',
 };
 
-const tabLabelStyle: React.CSSProperties = {
+const tabLabelStyle = {
   fontSize: '0.7rem',
   fontWeight: 'bold',
 };

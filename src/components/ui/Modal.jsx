@@ -2,13 +2,7 @@
 
 import React from 'react';
 
-interface ModalProps {
-  children: React.ReactNode;
-  onClose: () => void;
-  title?: string;
-}
-
-export default function Modal({ children, onClose, title }: ModalProps) {
+export default function Modal({ children, onClose, title }) {
   return (
     <div style={overlayStyle} onClick={onClose}>
       <div style={formCardStyle} onClick={(e) => e.stopPropagation()}>
@@ -19,7 +13,7 @@ export default function Modal({ children, onClose, title }: ModalProps) {
   );
 }
 
-const overlayStyle: React.CSSProperties = { 
+const overlayStyle = { 
   position: 'fixed', 
   top: 0, 
   left: 0, 
@@ -34,7 +28,7 @@ const overlayStyle: React.CSSProperties = {
   boxSizing: 'border-box'
 };
 
-const formCardStyle: React.CSSProperties = { 
+const formCardStyle = { 
   backgroundColor: '#171717', 
   width: '100%', 
   maxWidth: '500px', 
@@ -46,7 +40,7 @@ const formCardStyle: React.CSSProperties = {
   border: '1px solid #333'
 };
 
-const formTitleStyle: React.CSSProperties = { 
+const formTitleStyle = { 
   marginBottom: '20px', 
   fontSize: '1.2rem', 
   fontWeight: 'bold' 

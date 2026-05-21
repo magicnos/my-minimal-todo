@@ -11,10 +11,6 @@ export default function SortableTaskCard({
   task, 
   getTaskStatus, 
   onEdit 
-}: { 
-  task: any, 
-  getTaskStatus: (t: any) => any, 
-  onEdit: (t: any) => void 
 }) {
   // dnd-kit のフックを使って、この要素を「並び替え可能」にします
   const {
@@ -108,17 +104,17 @@ export default function SortableTaskCard({
 }
 
 // --- デザイン ---
-const taskCardStyle: React.CSSProperties = { padding: '12px', borderRadius: '14px', backgroundColor: '#171717', border: '1px solid #333', display: 'flex', alignItems: 'center', gap: '10px' };
-const dragHandleStyle: React.CSSProperties = { cursor: 'grab', color: '#444', fontSize: '1.2rem', padding: '0 4px', userSelect: 'none', touchAction: 'none' };
-const taskContentStyle: React.CSSProperties = { flex: 1, cursor: 'pointer', minWidth: 0 };
-const taskHeaderStyle: React.CSSProperties = { display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '4px', flexWrap: 'wrap', fontSize: '0.65rem' };
-const taskTitleStyle: React.CSSProperties = { fontSize: '1rem', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
-const timeInfoStyle: React.CSSProperties = { fontSize: '0.7rem', opacity: 0.5 };
-const progressInfoStyle: React.CSSProperties = { color: '#4dff4d', fontWeight: 'bold' };
-const doneBadgeStyle: React.CSSProperties = { fontSize: '0.8rem' };
-const rewardBadgeStyle: React.CSSProperties = { color: '#ffd700', opacity: 0.9 };
-const getPriorityBadgeStyle = (p: string) => ({ padding: '1px 5px', borderRadius: '3px', backgroundColor: p === 'HIGH' ? '#ff4d4d' : p === 'MEDIUM' ? '#ffa500' : '#4dff4d', color: '#000', fontWeight: 'bold' as const });
-const actionButtonsStyle: React.CSSProperties = { display: 'flex', gap: '8px' };
-const completeButtonStyle: React.CSSProperties = { width: '40px', height: '40px', borderRadius: '20px', border: '1px solid #333', backgroundColor: 'transparent', color: '#4dff4d', fontSize: '1.1rem', cursor: 'pointer' };
-const deleteButtonStyle: React.CSSProperties = { width: '32px', height: '32px', borderRadius: '16px', border: 'none', backgroundColor: 'transparent', color: '#ff4d4d', fontSize: '1rem', cursor: 'pointer', opacity: 0.6 };
-const cancelButtonStyle: React.CSSProperties = { width: '32px', height: '32px', borderRadius: '16px', border: 'none', backgroundColor: 'transparent', color: '#888', fontSize: '1rem', cursor: 'pointer', opacity: 0.8 };
+const taskCardStyle = { padding: '12px', borderRadius: '14px', backgroundColor: '#171717', border: '1px solid #333', display: 'flex', alignItems: 'center', gap: '10px' };
+const dragHandleStyle = { cursor: 'grab', color: '#444', fontSize: '1.2rem', padding: '0 4px', userSelect: 'none', touchAction: 'none' };
+const taskContentStyle = { flex: 1, cursor: 'pointer', minWidth: 0 };
+const taskHeaderStyle = { display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '4px', flexWrap: 'wrap', fontSize: '0.65rem' };
+const taskTitleStyle = { fontSize: '1rem', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
+const timeInfoStyle = { fontSize: '0.7rem', opacity: 0.5 };
+const progressInfoStyle = { color: '#4dff4d', fontWeight: 'bold' };
+const doneBadgeStyle = { fontSize: '0.8rem' };
+const rewardBadgeStyle = { color: '#ffd700', opacity: 0.9 };
+const getPriorityBadgeStyle = (p) => ({ padding: '1px 5px', borderRadius: '3px', backgroundColor: p === 'HIGH' ? '#ff4d4d' : p === 'MEDIUM' ? '#ffa500' : '#4dff4d', color: '#000', fontWeight: 'bold' });
+const actionButtonsStyle = { display: 'flex', gap: '8px' };
+const completeButtonStyle = { width: '40px', height: '40px', borderRadius: '20px', border: '1px solid #333', backgroundColor: 'transparent', color: '#4dff4d', fontSize: '1.1rem', cursor: 'pointer' };
+const deleteButtonStyle = { width: '32px', height: '32px', borderRadius: '16px', border: 'none', backgroundColor: 'transparent', color: '#ff4d4d', fontSize: '1rem', cursor: 'pointer', opacity: 0.6 };
+const cancelButtonStyle = { width: '32px', height: '32px', borderRadius: '16px', border: 'none', backgroundColor: 'transparent', color: '#888', fontSize: '1rem', cursor: 'pointer', opacity: 0.8 };

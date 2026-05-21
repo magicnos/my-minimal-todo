@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
  * アプリ全体をパスワードで保護するコンポーネントです。
  * 正しいパスワードが入力されるまで、中身（TODOリストなど）を表示させません。
  */
-export default function PasswordLockGuard({ children }: { children: React.ReactNode }) {
+export default function PasswordLockGuard({ children }) {
   // パスワードが認証されたかどうかを管理する状態（最初は false = 未認証）
   const [isAccessAuthorized, setIsAccessAuthorized] = useState(false);
   
@@ -42,7 +42,7 @@ export default function PasswordLockGuard({ children }: { children: React.ReactN
   /**
    * 入力欄の文字が変わるたびに呼び出される処理です。
    */
-  const handlePasswordInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePasswordInputChange = (event) => {
     setPasswordInputFieldValue(event.target.value);
   };
 
@@ -74,7 +74,7 @@ export default function PasswordLockGuard({ children }: { children: React.ReactN
 
 // --- 見た目の設定（CSS） ---
 
-const passwordScreenContainerStyle: React.CSSProperties = {
+const passwordScreenContainerStyle = {
   display: 'flex',
   justifyContent: 'center',
   alignItems: 'center',
@@ -83,7 +83,7 @@ const passwordScreenContainerStyle: React.CSSProperties = {
   color: '#ededed',
 };
 
-const passwordCardStyle: React.CSSProperties = {
+const passwordCardStyle = {
   padding: '2rem',
   borderRadius: '12px',
   backgroundColor: '#171717',
@@ -93,19 +93,19 @@ const passwordCardStyle: React.CSSProperties = {
   boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
 };
 
-const titleStyle: React.CSSProperties = {
+const titleStyle = {
   marginBottom: '1rem',
   fontSize: '1.5rem',
   fontWeight: 'bold',
 };
 
-const messageStyle: React.CSSProperties = {
+const messageStyle = {
   marginBottom: '1.5rem',
   fontSize: '0.9rem',
   opacity: 0.8,
 };
 
-const inputStyle: React.CSSProperties = {
+const inputStyle = {
   width: '100%',
   padding: '0.8rem',
   marginBottom: '1rem',
@@ -117,7 +117,7 @@ const inputStyle: React.CSSProperties = {
   outline: 'none',
 };
 
-const buttonStyle: React.CSSProperties = {
+const buttonStyle = {
   width: '100%',
   padding: '0.8rem',
   borderRadius: '8px',

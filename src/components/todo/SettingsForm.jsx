@@ -4,7 +4,7 @@ import { updateSettingsAction } from '@/app/actions';
 import { useState } from 'react';
 import Modal from '@/components/ui/Modal';
 
-export default function SettingsForm({ onComplete, initialData }: { onComplete: () => void; initialData: any; }) {
+export default function SettingsForm({ onComplete, initialData }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   return (
@@ -46,12 +46,12 @@ export default function SettingsForm({ onComplete, initialData }: { onComplete: 
   );
 }
 
-const inputGroupStyle: React.CSSProperties = { marginBottom: '20px' };
-const labelStyle: React.CSSProperties = { display: 'block', marginBottom: '8px', fontSize: '0.9rem', opacity: 0.7 };
-const inputStyle: React.CSSProperties = { width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #333', backgroundColor: '#0a0a0a', color: '#fff', fontSize: '1rem', boxSizing: 'border-box' };
-const rowStyle: React.CSSProperties = { display: 'flex', gap: '12px', marginBottom: '20px' };
-const halfInputStyle: React.CSSProperties = { flex: 1 };
-const helpTextStyle: React.CSSProperties = { fontSize: '0.75rem', opacity: 0.5, marginTop: '6px' };
-const buttonContainerStyle: React.CSSProperties = { display: 'flex', gap: '12px', marginTop: '30px' };
-const submitButtonStyle: React.CSSProperties = { flex: 2, padding: '16px', borderRadius: '12px', border: 'none', backgroundColor: '#ededed', color: '#0a0a0a', fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer' };
-const cancelButtonStyle: React.CSSProperties = { flex: 1, padding: '16px', borderRadius: '12px', border: '1px solid #333', backgroundColor: 'transparent', color: '#fff', fontSize: '1rem', cursor: 'pointer' };
+const inputGroupStyle = { marginBottom: '20px' };
+const labelStyle = { display: 'block', marginBottom: '8px', fontSize: '0.9rem', opacity: 0.7 };
+const inputStyle = { width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #333', backgroundColor: '#0a0a0a', color: '#fff', fontSize: '1rem', boxSizing: 'border-box' };
+const rowStyle = { display: 'flex', gap: '12px', marginBottom: '20px' };
+const halfInputStyle = { flex: 1 };
+const helpTextStyle = { fontSize: '0.75rem', opacity: 0.5, marginTop: '6px' };
+const buttonContainerStyle = { display: 'flex', gap: '12px', marginTop: '30px' };
+const submitButtonStyle = { flex: 2, padding: '16px', borderRadius: '12px', border: 'none', backgroundColor: '#ededed', color: '#0a0a0a', fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer' };
+const cancelButtonStyle = { flex: 1, padding: '16px', borderRadius: '12px', border: '1px solid #333', backgroundColor: 'transparent', color: '#fff', fontSize: '1rem', cursor: 'pointer' };

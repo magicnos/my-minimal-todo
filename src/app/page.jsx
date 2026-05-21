@@ -41,4 +41,4 @@ export default async function TodoMainPage() {
   );
 }
 
-const mainContainerStyle: React.CSSProperties = { margin: '0 auto', minHeight: '100vh' };
+const mainContainerStyle = { margin: '0 auto', minHeight: '100vh' };

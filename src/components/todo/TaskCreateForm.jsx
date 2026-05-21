@@ -4,23 +4,18 @@ import { createTaskAction, updateTaskAction } from '@/app/actions';
 import { useState } from 'react';
 import Modal from '@/components/ui/Modal';
 
-const formatToLocalString = (date?: Date) => {
+const formatToLocalString = (date) => {
   if (!date) return "";
   const d = new Date(date);
   d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
   return d.toISOString().slice(0, 16);
 };
 
-export default function TaskCreateForm({ onComplete, editTaskData }: { onComplete: () => void; editTaskData?: any; }) {
+export default function TaskCreateForm({ onComplete, editTaskData }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [taskType, setTaskType] = useState(editTaskData?.taskType || "DAILY");
-  const [dailyCounts, setDailyCounts] = useState<{ [key: number]: number }>(
+  const [dailyCounts, setDailyCounts] = useState(
     editTaskData?.habitDailySchedule || { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 }
-  );
-
-  const [isMultiStage, setIsMultiStage] = useState(editTaskData?.isMultiStage || false);
-  const [stages, setStages] = useState<{ target: number; xp: number; points: number }[]>(
-    editTaskData?.stages || [{ target: 1, xp: 10, points: 10 }]
   );
 
   const daysOfWeek = [
@@ -48,23 +43,11 @@ export default function TaskCreateForm({ onComplete, editTaskData }: { onComplet
     });
   };
 
-  const updateDailyCount = (day: number, val: number) => {
+  const updateDailyCount = (day, val) => {
     setDailyCounts(prev => {
       const next = { ...prev, [day]: val };
-      const maxTarget = Math.max(...Object.values(next));
-      if (isMultiStage && stages.length > maxTarget) {
-        setStages(stages.slice(0, maxTarget || 1));
-      }
       return next;
     });
-  };
-
-  const addStage = () => setStages([...stages, { target: (stages[stages.length - 1]?.target || 0) + 1, xp: 10, points: 10 }]);
-  const removeStage = (idx: number) => setStages(stages.filter((_, i) => i !== idx));
-  const updateStage = (idx: number, key: string, val: number) => {
-    const next = [...stages];
-    (next[idx] as any)[key] = val;
-    setStages(next);
   };
 
   const isHabitMode = taskType === 'DAILY' || taskType === 'MULTI_DAY';
@@ -76,10 +59,8 @@ export default function TaskCreateForm({ onComplete, editTaskData }: { onComplet
         setIsSubmitting(true);
         const formData = new FormData(e.currentTarget);
         if (taskType === 'SINGLE' && formData.get('taskDeadline')) {
-          formData.set('taskDeadline', new Date(formData.get('taskDeadline') as string).toISOString());
+          formData.set('taskDeadline', new Date(formData.get('taskDeadline')).toISOString());
         }
-        formData.set('isMultiStage', isMultiStage.toString());
-        formData.set('stages', JSON.stringify(stages));
 
         try {
           if (editTaskData?.id) { await updateTaskAction(editTaskData.id, formData); }
@@ -257,20 +238,20 @@ export default function TaskCreateForm({ onComplete, editTaskData }: { onComplet
   );
 }
 
-const inputGroupStyle: React.CSSProperties = { marginBottom: '16px' };
-const labelStyle: React.CSSProperties = { display: 'block', marginBottom: '6px', fontSize: '0.85rem', opacity: 0.7 };
-const inputStyle: React.CSSProperties = { width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #333', backgroundColor: '#0a0a0a', color: '#fff', fontSize: '1rem' };
-const textareaStyle: React.CSSProperties = { width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #333', backgroundColor: '#0a0a0a', color: '#fff', fontSize: '1rem', minHeight: '60px', resize: 'none' };
-const typeTabContainerStyle: React.CSSProperties = { display: 'flex', gap: '4px', backgroundColor: '#0a0a0a', padding: '4px', borderRadius: '10px' };
-const typeTabStyle: React.CSSProperties = { flex: 1, padding: '8px', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold' };
-const detailSectionStyle: React.CSSProperties = { padding: '16px', backgroundColor: '#222', borderRadius: '12px', marginBottom: '16px' };
-const daysGridStyle: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' };
-const dayInputItemStyle: React.CSSProperties = { textAlign: 'center' };
-const smallLabelStyle: React.CSSProperties = { fontSize: '0.6rem', display: 'block', marginBottom: '4px' };
-const smallInputStyle: React.CSSProperties = { width: '100%', padding: '4px', borderRadius: '4px', border: '1px solid #444', backgroundColor: '#0a0a0a', color: '#fff', textAlign: 'center' };
-const rowStyle: React.CSSProperties = { display: 'flex', gap: '10px', marginBottom: '12px' };
-const halfInputStyle: React.CSSProperties = { flex: 1 };
-const buttonContainerStyle: React.CSSProperties = { display: 'flex', gap: '12px' };
-const submitButtonStyle: React.CSSProperties = { flex: 2, padding: '16px', borderRadius: '12px', border: 'none', backgroundColor: '#ededed', color: '#0a0a0a', fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer' };
-const cancelButtonStyle: React.CSSProperties = { flex: 1, padding: '16px', borderRadius: '12px', border: '1px solid #333', backgroundColor: 'transparent', color: '#fff', fontSize: '1rem', cursor: 'pointer' };
-const miniButtonStyle: React.CSSProperties = { padding: '4px 8px', borderRadius: '6px', border: 'none', backgroundColor: '#444', color: '#fff', fontSize: '0.7rem', cursor: 'pointer' };
+const inputGroupStyle = { marginBottom: '16px' };
+const labelStyle = { display: 'block', marginBottom: '6px', fontSize: '0.85rem', opacity: 0.7 };
+const inputStyle = { width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #333', backgroundColor: '#0a0a0a', color: '#fff', fontSize: '1rem' };
+const textareaStyle = { width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #333', backgroundColor: '#0a0a0a', color: '#fff', fontSize: '1rem', minHeight: '60px', resize: 'none' };
+const typeTabContainerStyle = { display: 'flex', gap: '4px', backgroundColor: '#0a0a0a', padding: '4px', borderRadius: '10px' };
+const typeTabStyle = { flex: 1, padding: '8px', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold' };
+const detailSectionStyle = { padding: '16px', backgroundColor: '#222', borderRadius: '12px', marginBottom: '16px' };
+const daysGridStyle = { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' };
+const dayInputItemStyle = { textAlign: 'center' };
+const smallLabelStyle = { fontSize: '0.6rem', display: 'block', marginBottom: '4px' };
+const smallInputStyle = { width: '100%', padding: '4px', borderRadius: '4px', border: '1px solid #444', backgroundColor: '#0a0a0a', color: '#fff', textAlign: 'center' };
+const rowStyle = { display: 'flex', gap: '10px', marginBottom: '12px' };
+const halfInputStyle = { flex: 1 };
+const buttonContainerStyle = { display: 'flex', gap: '12px' };
+const submitButtonStyle = { flex: 2, padding: '16px', borderRadius: '12px', border: 'none', backgroundColor: '#ededed', color: '#0a0a0a', fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer' };
+const cancelButtonStyle = { flex: 1, padding: '16px', borderRadius: '12px', border: '1px solid #333', backgroundColor: 'transparent', color: '#fff', fontSize: '1rem', cursor: 'pointer' };
+const miniButtonStyle = { padding: '4px 8px', borderRadius: '6px', border: 'none', backgroundColor: '#444', color: '#fff', fontSize: '0.7rem', cursor: 'pointer' };

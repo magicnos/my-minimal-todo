@@ -12,12 +12,6 @@ export default function SortableRewardCard({
   onEdit,
   onDelete,
   onExchange
-}: { 
-  reward: any, 
-  userPoints: number,
-  onEdit: (r: any) => void,
-  onDelete: (id: number, title: string) => void,
-  onExchange: (id: number) => void
 }) {
   const {
     attributes,
@@ -66,7 +60,7 @@ export default function SortableRewardCard({
   );
 }
 
-const rewardCardStyle: React.CSSProperties = { 
+const rewardCardStyle = { 
   display: 'flex', 
   justifyContent: 'space-between', 
   alignItems: 'center', 
@@ -77,7 +71,7 @@ const rewardCardStyle: React.CSSProperties = {
   gap: '10px'
 };
 
-const dragHandleStyle: React.CSSProperties = { 
+const dragHandleStyle = { 
   cursor: 'grab', 
   color: '#444', 
   fontSize: '1.2rem', 
@@ -86,13 +80,13 @@ const dragHandleStyle: React.CSSProperties = {
   touchAction: 'none' 
 };
 
-const rewardInfoStyle: React.CSSProperties = { 
+const rewardInfoStyle = { 
   flex: 1, 
   minWidth: 0, 
   cursor: 'pointer' 
 };
 
-const rewardTitleStyle: React.CSSProperties = { 
+const rewardTitleStyle = { 
   fontSize: '1rem', 
   fontWeight: 'bold', 
   whiteSpace: 'nowrap', 
@@ -100,18 +94,18 @@ const rewardTitleStyle: React.CSSProperties = {
   textOverflow: 'ellipsis' 
 };
 
-const rewardCostStyle: React.CSSProperties = { 
+const rewardCostStyle = { 
   fontSize: '0.75rem', 
   color: '#ffd700', 
   marginTop: '2px' 
 };
 
-const rewardActionsStyle: React.CSSProperties = { 
+const rewardActionsStyle = { 
   display: 'flex', 
   gap: '8px' 
 };
 
-const rewardExchangeButtonStyle: React.CSSProperties = { 
+const rewardExchangeButtonStyle = { 
   padding: '6px 12px', 
   borderRadius: '6px', 
   border: 'none', 
@@ -122,7 +116,7 @@ const rewardExchangeButtonStyle: React.CSSProperties = {
   cursor: 'pointer' 
 };
 
-const rewardDeleteButtonStyle: React.CSSProperties = { 
+const rewardDeleteButtonStyle = { 
   backgroundColor: 'transparent', 
   border: 'none', 
   cursor: 'pointer', 

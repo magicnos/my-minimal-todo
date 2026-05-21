@@ -4,7 +4,7 @@ import { PrismaClient } from '@prisma/client';
  * データベースの「窓口」を作るプログラムです。
  */
 
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
+const globalForPrisma = global;
 
 export const prisma =
   globalForPrisma.prisma ||
