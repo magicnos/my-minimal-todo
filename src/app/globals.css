@@ -431,3 +431,69 @@ body {
   font-size: 0.7rem;
   cursor: pointer;
 }
+
+/* Level Up Effect */
+.level-up-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  pointer-events: none;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(4px);
+  animation: fadeOut 0.5s ease 2.5s forwards;
+}
+
+.level-up-content {
+  text-align: center;
+  animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.level-up-text {
+  font-size: 4rem;
+  font-weight: 900;
+  color: var(--accent-color);
+  text-shadow: 0 0 20px rgba(77, 255, 77, 0.8);
+  margin-bottom: 10px;
+  letter-spacing: 4px;
+}
+
+.level-up-number {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #fff;
+  animation: slideUp 0.5s ease 0.2s both;
+}
+
+@keyframes popIn {
+  0% { transform: scale(0); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes fadeOut {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes slideUp {
+  0% { transform: translateY(20px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+/* Sparkle particles */
+.sparkle {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background-color: var(--accent-color);
+  border-radius: 50%;
+  animation: sparkle-move 1.5s ease-out forwards;
+}
+
+@keyframes sparkle-move {
+  0% { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; }
+}
+

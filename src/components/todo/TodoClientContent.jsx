@@ -20,6 +20,7 @@ import TaskCreateForm from './TaskCreateForm';
 import SettingsForm from './SettingsForm';
 import SortableTaskCard from './SortableTaskCard';
 import Tabs from '@/components/ui/Tabs';
+import LevelUpOverlay from '@/components/ui/LevelUpOverlay';
 import { updateTaskOrderAction } from '@/app/actions';
 import { useTaskStatus } from '@/hooks/useTaskStatus';
 
@@ -30,6 +31,8 @@ export default function TodoClientContent({ initialTasks, userProfile }) {
   const [activeTab, setActiveTab] = useState('HABIT');
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [isSettingsVisible, setIsSettingsVisible] = useState(false);
+  const [isLevelUp, setIsLevelUp] = useState(false);
+  const [lastLevel, setLastLevel] = useState(userProfile.level);
   const [editingTask, setEditingTask] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [singleSortMode, setSingleSortMode] = useState('SORT_ORDER');
@@ -49,6 +52,14 @@ export default function TodoClientContent({ initialTasks, userProfile }) {
     const timer = setInterval(() => setCurrentTime(new Date()), 30000);
     return () => clearInterval(timer);
   }, []);
+
+  // レベルアップの検知
+  useEffect(() => {
+    if (userProfile.level > lastLevel) {
+      setIsLevelUp(true);
+    }
+    setLastLevel(userProfile.level);
+  }, [userProfile.level, lastLevel]);
 
   const xpScaling = userProfile.xpScaling || 100;
   const xpToNextLevel = userProfile.level * xpScaling;
@@ -144,6 +155,7 @@ export default function TodoClientContent({ initialTasks, userProfile }) {
 
       {isFormVisible && <TaskCreateForm onComplete={() => { setIsFormVisible(false); setEditingTask(null); }} editTaskData={editingTask} />}
       {isSettingsVisible && <SettingsForm onComplete={() => setIsSettingsVisible(false)} initialData={userProfile} />}
+      {isLevelUp && <LevelUpOverlay level={userProfile.level} onComplete={() => setIsLevelUp(false)} />}
     </div>
   );
 }
