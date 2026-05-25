@@ -255,6 +255,61 @@ export async function exchangeRewardAction(rewardId) {
 }
 
 /**
+ * カレンダーの予定を作成する
+ */
+export async function createCalendarEventAction(formData) {
+  const title = formData.get('title');
+  const memo = formData.get('memo') || "";
+  const dateStr = formData.get('date');
+  const startTime = formData.get('startTime') || null;
+  const endTime = formData.get('endTime') || null;
+
+  await prisma.calendarEvent.create({
+    data: {
+      title,
+      memo,
+      date: new Date(dateStr),
+      startTime,
+      endTime
+    }
+  });
+  revalidatePath('/');
+}
+
+/**
+ * カレンダーの予定を更新する
+ */
+export async function updateCalendarEventAction(eventId, formData) {
+  const title = formData.get('title');
+  const memo = formData.get('memo') || "";
+  const dateStr = formData.get('date');
+  const startTime = formData.get('startTime') || null;
+  const endTime = formData.get('endTime') || null;
+
+  await prisma.calendarEvent.update({
+    where: { id: eventId },
+    data: {
+      title,
+      memo,
+      date: new Date(dateStr),
+      startTime,
+      endTime
+    }
+  });
+  revalidatePath('/');
+}
+
+/**
+ * カレンダーの予定を削除する
+ */
+export async function deleteCalendarEventAction(eventId) {
+  await prisma.calendarEvent.delete({
+    where: { id: eventId }
+  });
+  revalidatePath('/');
+}
+
+/**
  * ユーザープロファイルを取得する
  */
 export async function getUserProfileAction() {

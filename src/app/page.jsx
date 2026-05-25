@@ -30,12 +30,18 @@ export default async function TodoMainPage() {
     },
   });
 
+  // カレンダーの予定を取得
+  const calendarEvents = await prisma.calendarEvent.findMany({
+    orderBy: { date: 'asc' }
+  });
+
   return (
     <main style={mainContainerStyle}>
       <TodoClientContent 
         initialTasks={JSON.parse(JSON.stringify(allTodoTasks))} 
         userProfile={JSON.parse(JSON.stringify(userProfile))}
         rewards={JSON.parse(JSON.stringify(rewards))}
+        calendarEvents={JSON.parse(JSON.stringify(calendarEvents))}
       />
     </main>
   );

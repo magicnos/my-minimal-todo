@@ -22,6 +22,7 @@ import RewardCreateForm from './RewardCreateForm';
 import SettingsForm from './SettingsForm';
 import SortableTaskCard from './SortableTaskCard';
 import SortableRewardCard from './SortableRewardCard';
+import CalendarView from './CalendarView';
 import Tabs from '@/components/ui/Tabs';
 import { 
   updateTaskOrderAction, 
@@ -38,7 +39,7 @@ import { styles } from './todoStyles';
  * Todoアプリのメインクライアントコンポーネント
  * タスク一覧、報酬、レベル表示などの状態管理と描画を担当します。
  */
-export default function TodoClientContent({ initialTasks, userProfile, rewards: initialRewards }) {
+export default function TodoClientContent({ initialTasks, userProfile, rewards: initialRewards, calendarEvents }) {
   // --- 状態管理 (State) ---
   const [activeTab, setActiveTab] = useState('HABIT');
   const [isFormVisible, setIsFormVisible] = useState(false);
@@ -131,6 +132,7 @@ export default function TodoClientContent({ initialTasks, userProfile, rewards: 
   const tabs = [
     { id: 'HABIT', label: '習慣', icon: '🔄' },
     { id: 'SINGLE', label: '一回きり', icon: '📍' },
+    { id: 'CALENDAR', label: 'カレンダー', icon: '📅' },
     { id: 'REWARD', label: 'ご褒美', icon: '🎁' },
   ];
 
@@ -206,6 +208,13 @@ export default function TodoClientContent({ initialTasks, userProfile, rewards: 
           </section>
         )}
 
+        {/* カレンダータブ */}
+        {activeTab === 'CALENDAR' && (
+          <section style={styles.column}>
+            <CalendarView tasks={localTasks} events={calendarEvents} />
+          </section>
+        )}
+
         {/* ご褒美タブ */}
         {activeTab === 'REWARD' && (
           <section style={styles.column}>
@@ -243,3 +252,4 @@ export default function TodoClientContent({ initialTasks, userProfile, rewards: 
     </div>
   );
 }
+
