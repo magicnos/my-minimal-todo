@@ -3,15 +3,14 @@
 import { revalidatePath } from 'next/cache';
 import prisma from '@/lib/prisma';
 
-/**
- * データベース操作やサーバーサイドのロジックを管理するサーバーアクション
- */
+/* ==========================================
+   共有ユーティリティ / 内部関数
+   ========================================== */
 
 /**
- * ユーザープロファイルを取得または作成する
- * 初回起動時などにプロファイルがない場合、デフォルト値で作成します。
+ * ユーザープロファイルを取得、存在しない場合は初期値で作成
  */
-async function getOrCreateProfile() {
+async function getProfile() {
   let profile = await prisma.userProfile.findUnique({ where: { id: 1 } });
   if (!profile) {
     profile = await prisma.userProfile.create({
@@ -22,21 +21,19 @@ async function getOrCreateProfile() {
 }
 
 /**
- * フォームから送信されたデータ（formData）を整形してオブジェクトとして返す
- * 各タスクタイプ（毎日、一回きりなど）に応じたデータの処理を行います。
+ * フォームデータからタスク情報を抽出
  */
-function extractTaskData(formData) {
+function parseTaskFormData(formData) {
   const taskType = formData.get('taskType');
-  const deadlineStr = formData.get('taskDeadline');
+  const deadline = formData.get('taskDeadline');
 
+  // 毎日タスクの場合、曜日ごとの目標回数を抽出
   let habitDailySchedule = null;
-  // 毎日タスクの場合、曜日ごとの目標回数を取得
   if (taskType === 'DAILY') {
-    const schedule = {};
+    habitDailySchedule = {};
     for (let i = 0; i < 7; i++) {
-      schedule[i] = parseInt(formData.get(`dailyCount_${i}`) || '0');
+      habitDailySchedule[i] = parseInt(formData.get(`dailyCount_${i}`) || '0');
     }
-    habitDailySchedule = schedule;
   }
 
   return {
@@ -44,7 +41,7 @@ function extractTaskData(formData) {
     taskMemo: formData.get('taskMemo') || "",
     taskType,
     taskPriority: formData.get('taskPriority'),
-    taskDeadline: deadlineStr ? new Date(deadlineStr) : null,
+    taskDeadline: deadline ? new Date(deadline) : null,
     habitDailySchedule,
     habitStartDay: taskType === 'MULTI_DAY' ? parseInt(formData.get('habitStartDay') || '0') : null,
     habitStartTime: taskType === 'MULTI_DAY' ? formData.get('habitStartTime') : null,
@@ -56,31 +53,34 @@ function extractTaskData(formData) {
   };
 }
 
+/* ==========================================
+   タスク関連のアクション
+   ========================================== */
+
 /**
- * 新しいタスクを作成する
+ * タスク作成
  */
 export async function createTaskAction(formData) {
-  const taskData = extractTaskData(formData);
-  const lastTask = await prisma.todoTask.findFirst({ orderBy: { sortOrder: 'desc' } });
-  const newSortOrder = lastTask ? lastTask.sortOrder + 1 : 0;
+  const data = parseTaskFormData(formData);
+  const last = await prisma.todoTask.findFirst({ orderBy: { sortOrder: 'desc' } });
   
   await prisma.todoTask.create({
-    data: { ...taskData, sortOrder: newSortOrder }
+    data: { ...data, sortOrder: last ? last.sortOrder + 1 : 0 }
   });
   revalidatePath('/');
 }
 
 /**
- * タスクの内容を更新する
+ * タスク更新
  */
 export async function updateTaskAction(taskId, formData) {
-  const taskData = extractTaskData(formData);
-  await prisma.todoTask.update({ where: { id: taskId }, data: taskData });
+  const data = parseTaskFormData(formData);
+  await prisma.todoTask.update({ where: { id: taskId }, data });
   revalidatePath('/');
 }
 
 /**
- * タスクの並び順（sortOrder）を一括で更新する
+ * 並び順の更新
  */
 export async function updateTaskOrderAction(orderedIds) {
   for (let i = 0; i < orderedIds.length; i++) {
@@ -93,8 +93,7 @@ export async function updateTaskOrderAction(orderedIds) {
 }
 
 /**
- * タスクを完了（または取り消し）し、XPを更新する
- * レベルアップの判定もここで行います。
+ * タスクの完了処理 (XP加算 / レベルアップ判定)
  */
 export async function completeTaskAction(taskId, currentCount, isCancel = false) {
   const task = await prisma.todoTask.findUnique({ where: { id: taskId } });
@@ -102,44 +101,39 @@ export async function completeTaskAction(taskId, currentCount, isCancel = false)
 
   const nextCount = isCancel ? Math.max(0, currentCount - 1) : currentCount + 1;
   
-  // タスクの完了回数と最終完了日時を更新
+  // 進捗更新
   await prisma.todoTask.update({
     where: { id: taskId },
     data: { completedCount: nextCount, lastCompletedAt: new Date() }
   });
 
-  const profile = await getOrCreateProfile();
-  let addXP = 0;
-
-  // 報酬を付与するタイミングか判定
+  // 報酬（XP）付与判定
   let target = task.habitTargetCount || 1;
   if (task.taskType === 'DAILY') {
-    const currentDay = new Date().getDay();
-    target = task.habitDailySchedule?.[currentDay] || 0;
+    target = task.habitDailySchedule?.[new Date().getDay()] || 0;
   }
 
-  const shouldGiveReward = task.rewardTiming === 'EACH' || (task.rewardTiming === 'TOTAL' && (isCancel ? currentCount === target : nextCount === target));
-
-  if (shouldGiveReward) {
-    addXP = isCancel ? -task.rewardXP : task.rewardXP;
-  }
-
-  if (addXP !== 0) {
+  const isEACH = task.rewardTiming === 'EACH';
+  const isTOTALReached = task.rewardTiming === 'TOTAL' && (isCancel ? currentCount === target : nextCount === target);
+  
+  if (isEACH || isTOTALReached) {
+    const profile = await getProfile();
+    const addXP = isCancel ? -task.rewardXP : task.rewardXP;
+    
     let newXP = profile.xp + addXP;
     let newLevel = profile.level;
-    const xpScaling = profile.xpScaling || 100;
+    const scaling = profile.xpScaling || 100;
 
-    // レベルアップのループ判定
+    // レベルアップ / レベルダウン
     if (addXP > 0) {
-      while (newXP >= newLevel * xpScaling) {
-        newXP -= newLevel * xpScaling;
-        newLevel += 1;
+      while (newXP >= newLevel * scaling) {
+        newXP -= newLevel * scaling;
+        newLevel++;
       }
-    } else if (addXP < 0) {
-      // XPがマイナスになった場合のレベルダウン処理
+    } else {
       while (newXP < 0 && newLevel > 1) {
-        newLevel -= 1;
-        newXP += newLevel * xpScaling;
+        newLevel--;
+        newXP += newLevel * scaling;
       }
       if (newXP < 0) newXP = 0;
     }
@@ -150,7 +144,7 @@ export async function completeTaskAction(taskId, currentCount, isCancel = false)
     });
   }
 
-  // 一回きりのタスクで完了した場合、データベースから削除（クリーンアップ）
+  // 一回きりタスクの削除
   if (!isCancel && task.taskType === 'SINGLE' && nextCount >= 1) {
     await prisma.todoTask.delete({ where: { id: taskId } });
   }
@@ -159,15 +153,19 @@ export async function completeTaskAction(taskId, currentCount, isCancel = false)
 }
 
 /**
- * タスクを削除する
+ * タスク削除
  */
 export async function deleteTaskAction(taskId) {
   await prisma.todoTask.delete({ where: { id: taskId } });
   revalidatePath('/');
 }
 
+/* ==========================================
+   設定 / プロファイル関連のアクション
+   ========================================== */
+
 /**
- * ユーザー設定（レベル、XPなど）を直接更新する
+ * ユーザー設定の一括更新
  */
 export async function updateSettingsAction(formData) {
   const level = parseInt(formData.get('level') || '1');
@@ -182,63 +180,8 @@ export async function updateSettingsAction(formData) {
 }
 
 /**
- * カレンダーの予定を作成する
- */
-export async function createCalendarEventAction(formData) {
-  const title = formData.get('title');
-  const memo = formData.get('memo') || "";
-  const dateStr = formData.get('date');
-  const startTime = formData.get('startTime') || null;
-  const endTime = formData.get('endTime') || null;
-
-  await prisma.calendarEvent.create({
-    data: {
-      title,
-      memo,
-      date: new Date(dateStr),
-      startTime,
-      endTime
-    }
-  });
-  revalidatePath('/');
-}
-
-/**
- * カレンダーの予定を更新する
- */
-export async function updateCalendarEventAction(eventId, formData) {
-  const title = formData.get('title');
-  const memo = formData.get('memo') || "";
-  const dateStr = formData.get('date');
-  const startTime = formData.get('startTime') || null;
-  const endTime = formData.get('endTime') || null;
-
-  await prisma.calendarEvent.update({
-    where: { id: eventId },
-    data: {
-      title,
-      memo,
-      date: new Date(dateStr),
-      startTime,
-      endTime
-    }
-  });
-  revalidatePath('/');
-}
-
-/**
- * カレンダーの予定を削除する
- */
-export async function deleteCalendarEventAction(eventId) {
-  await prisma.calendarEvent.delete({
-    where: { id: eventId }
-  });
-  revalidatePath('/');
-}
-
-/**
- * ユーザープロファイルを取得する
+ * プロファイル取得
  */
 export async function getUserProfileAction() {
-  return await getOrCreateProfile();
+  return await getProfile();
 }

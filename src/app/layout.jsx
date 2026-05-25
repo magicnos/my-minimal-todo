@@ -1,21 +1,8 @@
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import PasswordLockGuard from "@/components/ui/PasswordLockGuard";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata = {
-  title: "My Minimal Todo",
-  description: "自分専用のシンプルなTODOリスト",
-  manifest: "/manifest.json",
+  title: "Minimal Todo",
+  description: "Level & XP based simple todo app",
 };
 
 export const viewport = {
@@ -25,15 +12,11 @@ export const viewport = {
   userScalable: false,
 };
 
-export default function RootLayout({
-  children,
-}) {
+export default function RootLayout({ children }) {
   return (
-    <html lang="ja" className={`${geistSans.variable} ${geistMono.variable}`}>
+    <html lang="ja">
       <body>
-        <PasswordLockGuard>
-          {children}
-        </PasswordLockGuard>
+        {children}
       </body>
     </html>
   );

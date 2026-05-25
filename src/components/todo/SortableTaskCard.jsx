@@ -5,14 +5,9 @@ import { CSS } from '@dnd-kit/utilities';
 import { deleteTaskAction, completeTaskAction } from '@/app/actions';
 
 /**
- * ドラッグアンドドロップに対応したタスクカードです。
+ * ドラッグアンドドロップに対応したタスクカード
  */
-export default function SortableTaskCard({ 
-  task, 
-  getTaskStatus, 
-  onEdit 
-}) {
-  // dnd-kit のフックを使って、この要素を「並び替え可能」にします
+export default function SortableTaskCard({ task, getTaskStatus, onEdit }) {
   const {
     attributes,
     listeners,
@@ -22,116 +17,56 @@ export default function SortableTaskCard({
     isDragging
   } = useSortable({ id: task.id });
 
-  // ドラッグ中の位置ズレを計算します
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : (getTaskStatus(task).isDone ? 0.4 : 1),
-    zIndex: isDragging ? 1000 : 1,
-  };
-
   const { isDone, target, current } = getTaskStatus(task);
   const isExpired = task.taskType === 'SINGLE' && new Date(task.taskDeadline) < new Date() && !isDone;
 
-  const cardStyle = {
-    ...taskCardStyle,
-    ...style,
-    borderColor: isExpired ? '#ff4d4d' : '#333',
-    boxShadow: isExpired ? '0 0 10px rgba(255, 77, 77, 0.3)' : 'none',
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : (isDone ? 0.4 : 1),
+    zIndex: isDragging ? 1000 : 1,
+    borderColor: isExpired ? '#ff4d4d' : undefined,
+    boxShadow: isExpired ? '0 0 10px rgba(255, 77, 77, 0.3)' : undefined,
   };
 
   const handleComplete = async (e) => {
     e.stopPropagation();
-    
-    // 一回きりタスクの場合は確認ダイアログを出す
     if (task.taskType === 'SINGLE') {
-      if (!window.confirm(`「${task.taskTitle}」を達成にしてもよろしいですか？（達成するとリストから消えます）`)) {
-        return;
-      }
+      if (!confirm(`「${task.taskTitle}」を達成にしてもよろしいですか？`)) return;
     }
-
     await completeTaskAction(task.id, current);
-    
-    if (task.taskType === 'SINGLE') {
-      alert(`「${task.taskTitle}」を達成しました！お疲れ様です！`);
-    }
   };
 
-  return (
-    <div ref={setNodeRef} style={cardStyle}>
-      {/* ドラッグ用のハンドル（つまみ） */}
-      <div {...attributes} {...listeners} style={dragHandleStyle}>
-        ⣿
-      </div>
+  const priorityClass = `priority-${task.taskPriority.toLowerCase()}`;
 
-      <div style={taskContentStyle} onClick={() => onEdit(task)}>
-        <div style={taskHeaderStyle}>
-          <span style={getPriorityBadgeStyle(task.taskPriority)}>{task.taskPriority}</span>
+  return (
+    <div ref={setNodeRef} className="task-card" style={style}>
+      <div {...attributes} {...listeners} className="drag-handle">⣿</div>
+
+      <div className="task-content" onClick={() => onEdit(task)}>
+        <div className="task-header">
+          <span className={`priority-badge ${priorityClass}`}>{task.taskPriority}</span>
           {task.taskType !== 'SINGLE' && (
-            <span style={progressInfoStyle}>{current}/{target > 0 ? target : '-'}</span>
+            <span className="progress-info">{current}/{target > 0 ? target : '-'}</span>
           )}
-          <span style={rewardBadgeStyle}>{task.rewardXP}XP</span>
-          {isDone && target > 0 && <span style={doneBadgeStyle}>✅</span>}
+          <span className="reward-badge">{task.rewardXP}XP</span>
+          {isDone && target > 0 && <span>✅</span>}
         </div>
-        <h3 style={taskTitleStyle}>{task.taskTitle}</h3>
-        <div style={timeInfoStyle}>
+        <h3 className="task-title">{task.taskTitle}</h3>
+        <div className="task-time">
           {task.taskType === 'SINGLE' ? `〆: ${new Date(task.taskDeadline).toLocaleString('ja-JP', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}` 
           : task.taskType === 'MULTI_DAY' ? `${['日','月','火','水','木','金','土'][task.habitStartDay]} ${task.habitStartTime} 〜 ${['日','月','火','水','木','金','土'][task.habitEndDay]} ${task.habitEndTime}`
           : '毎日'}
         </div>
       </div>
       
-      <div style={actionButtonsStyle}>
+      <div className="task-actions">
         {task.taskType !== 'SINGLE' && current > 0 && (
-          <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              if (confirm('達成をキャンセルしますか？')) completeTaskAction(task.id, current, true);
-            }} 
-            style={cancelButtonStyle}
-            title="達成を戻す"
-          >
-            ↩️
-          </button>
+          <button className="btn-action btn-cancel" onClick={(e) => { e.stopPropagation(); if (confirm('達成をキャンセルしますか？')) completeTaskAction(task.id, current, true); }}>↩️</button>
         )}
-        <button 
-          onClick={(e) => {
-            e.stopPropagation();
-            if (confirm('このタスクを削除しますか？')) deleteTaskAction(task.id);
-          }} 
-          style={deleteButtonStyle}
-          title="削除"
-        >
-          🗑️
-        </button>
-        <button 
-          onClick={handleComplete} 
-          style={{
-            ...completeButtonStyle,
-            backgroundColor: isDone ? '#4dff4d' : 'transparent',
-            color: isDone ? '#000' : '#4dff4d'
-          }}
-          title={task.taskType === 'SINGLE' ? "達成する" : "カウントを増やす"}
-        >
-          ✓
-        </button>
+        <button className="btn-action btn-delete" onClick={(e) => { e.stopPropagation(); if (confirm('削除しますか？')) deleteTaskAction(task.id); }}>🗑️</button>
+        <button className={`btn-complete ${isDone ? 'done' : ''}`} onClick={handleComplete}>✓</button>
       </div>
     </div>
   );
 }
-
-// --- デザイン ---
-const taskCardStyle = { padding: '12px', borderRadius: '14px', backgroundColor: '#171717', border: '1px solid #333', display: 'flex', alignItems: 'center', gap: '10px' };
-const dragHandleStyle = { cursor: 'grab', color: '#444', fontSize: '1.2rem', padding: '0 4px', userSelect: 'none', touchAction: 'none' };
-const taskContentStyle = { flex: 1, cursor: 'pointer', minWidth: 0 };
-const taskHeaderStyle = { display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '4px', flexWrap: 'wrap', fontSize: '0.65rem' };
-const taskTitleStyle = { fontSize: '1rem', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
-const timeInfoStyle = { fontSize: '0.7rem', opacity: 0.5 };
-const progressInfoStyle = { color: '#4dff4d', fontWeight: 'bold' };
-const doneBadgeStyle = { fontSize: '0.8rem' };
-const rewardBadgeStyle = { color: '#ffd700', opacity: 0.9 };
-const getPriorityBadgeStyle = (p) => ({ padding: '1px 5px', borderRadius: '3px', backgroundColor: p === 'HIGH' ? '#ff4d4d' : p === 'MEDIUM' ? '#ffa500' : '#4dff4d', color: '#000', fontWeight: 'bold' });
-const actionButtonsStyle = { display: 'flex', gap: '8px' };
-const completeButtonStyle = { width: '40px', height: '40px', borderRadius: '20px', border: '1px solid #333', backgroundColor: 'transparent', color: '#4dff4d', fontSize: '1.1rem', cursor: 'pointer' };
-const deleteButtonStyle = { width: '32px', height: '32px', borderRadius: '16px', border: 'none', backgroundColor: 'transparent', color: '#ff4d4d', fontSize: '1rem', cursor: 'pointer', opacity: 0.6 };
-const cancelButtonStyle = { width: '32px', height: '32px', borderRadius: '16px', border: 'none', backgroundColor: 'transparent', color: '#888', fontSize: '1rem', cursor: 'pointer', opacity: 0.8 };

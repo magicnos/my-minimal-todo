@@ -59,18 +59,6 @@ model UserProfile {
   updatedAt     DateTime @updatedAt
 }
 
-// カレンダーの予定
-model CalendarEvent {
-  id        Int      @id @default(autoincrement())
-  title     String
-  memo      String?
-  date      DateTime
-  startTime String?  // "HH:mm"
-  endTime   String?  // "HH:mm"
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
 // 通知時間のリスト（復活）
 model TaskNotification {
   id                Int      @id @default(autoincrement())

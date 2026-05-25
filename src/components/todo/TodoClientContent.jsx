@@ -16,43 +16,31 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 
-// 自作コンポーネントとアクション
 import TaskCreateForm from './TaskCreateForm';
 import SettingsForm from './SettingsForm';
 import SortableTaskCard from './SortableTaskCard';
-import CalendarView from './CalendarView';
 import Tabs from '@/components/ui/Tabs';
-import { 
-  updateTaskOrderAction
-} from '@/app/actions';
-
-// カスタムフックとスタイル
+import { updateTaskOrderAction } from '@/app/actions';
 import { useTaskStatus } from '@/hooks/useTaskStatus';
-import { styles } from './todoStyles';
 
 /**
- * Todoアプリのメインクライアントコンポーネント
- * タスク一覧、レベル表示などの状態管理と描画を担当します。
+ * メインのクライアントコンポーネント
  */
-export default function TodoClientContent({ initialTasks, userProfile, calendarEvents }) {
-  // --- 状態管理 (State) ---
+export default function TodoClientContent({ initialTasks, userProfile }) {
   const [activeTab, setActiveTab] = useState('HABIT');
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [isSettingsVisible, setIsSettingsVisible] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [singleSortMode, setSingleSortMode] = useState('SORT_ORDER');
-
   const [localTasks, setLocalTasks] = useState([...initialTasks].sort((a, b) => a.sortOrder - b.sortOrder));
 
-  // --- カスタムフック (Hooks) ---
   const { getTaskStatus } = useTaskStatus(currentTime);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  // --- 効果 (Effects) ---
   useEffect(() => {
     setLocalTasks([...initialTasks].sort((a, b) => a.sortOrder - b.sortOrder));
   }, [initialTasks]);
@@ -62,130 +50,98 @@ export default function TodoClientContent({ initialTasks, userProfile, calendarE
     return () => clearInterval(timer);
   }, []);
 
-  // --- レベル・XP計算 ---
   const xpScaling = userProfile.xpScaling || 100;
   const xpToNextLevel = userProfile.level * xpScaling;
   const xpPercentage = Math.min(100, (userProfile.xp / xpToNextLevel) * 100);
 
-  // --- イベントハンドラ (Handlers) ---
-  
-  // ドラッグ＆ドロップ終了時の処理
   const handleDragEnd = async (event, type) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
-    const relevantTasks = type === 'HABIT' 
-      ? localTasks.filter(t => t.taskType !== 'SINGLE')
-      : localTasks.filter(t => t.taskType === 'SINGLE');
+    const filterFn = type === 'HABIT' ? (t => t.taskType !== 'SINGLE') : (t => t.taskType === 'SINGLE');
+    const relevantTasks = localTasks.filter(filterFn);
+    const otherTasks = localTasks.filter(t => !filterFn(t));
 
     const oldIndex = relevantTasks.findIndex(t => t.id === active.id);
     const newIndex = relevantTasks.findIndex(t => t.id === over.id);
-
     const newRelevantTasks = arrayMove(relevantTasks, oldIndex, newIndex);
-    
-    const otherTasks = type === 'HABIT'
-      ? localTasks.filter(t => t.taskType === 'SINGLE')
-      : localTasks.filter(t => t.taskType !== 'SINGLE');
-
     const newAllTasks = [...newRelevantTasks, ...otherTasks];
-    setLocalTasks(newAllTasks);
 
+    setLocalTasks(newAllTasks);
     await updateTaskOrderAction(newAllTasks.map(t => t.id));
   };
 
-  // --- データのフィルタリングとソート ---
   const habits = localTasks.filter(t => t.taskType !== 'SINGLE');
   const singles = [...localTasks.filter(t => t.taskType === 'SINGLE')].sort((a, b) => {
-    if (singleSortMode === 'DEADLINE') {
-      return new Date(a.taskDeadline).getTime() - new Date(b.taskDeadline).getTime();
-    }
-    return 0;
+    return singleSortMode === 'DEADLINE' ? new Date(a.taskDeadline).getTime() - new Date(b.taskDeadline).getTime() : 0;
   });
 
   const tabs = [
     { id: 'HABIT', label: '習慣', icon: '🔄' },
     { id: 'SINGLE', label: '一回きり', icon: '📍' },
-    { id: 'CALENDAR', label: 'カレンダー', icon: '📅' },
   ];
 
-  // --- レンダリング (Render) ---
   return (
-    <div style={styles.mainWrapper}>
-      <header style={styles.header}>
-        <h1 style={styles.appTitle}>Minimal Todo</h1>
-        <button onClick={() => setIsSettingsVisible(true)} style={styles.settingsButton} title="設定">⚙️</button>
+    <div className="main-wrapper">
+      <header className="header">
+        <h1 className="app-title">Minimal Todo</h1>
+        <button onClick={() => setIsSettingsVisible(true)} className="settings-button" title="設定">⚙️</button>
       </header>
 
-      {/* ステータスバー (レベル、XP) */}
-      <div style={styles.statsContainer}>
-        <div style={styles.statItem}>
-          <div style={styles.statLabel}>LEVEL</div>
-          <div style={styles.statValue}>{userProfile.level}</div>
+      <div className="stats-container">
+        <div className="stat-item">
+          <div className="stat-label">LEVEL</div>
+          <div className="stat-value">{userProfile.level}</div>
         </div>
-        <div style={styles.xpContainer}>
-          <div style={styles.statLabel}>XP: {userProfile.xp} / {xpToNextLevel}</div>
-          <div style={styles.xpProgressBarBg}>
-            <div style={{ ...styles.xpProgressBarFill, width: `${xpPercentage}%` }}></div>
+        <div className="xp-container">
+          <div className="stat-label">XP: {userProfile.xp} / {xpToNextLevel}</div>
+          <div className="xp-bar-bg">
+            <div className="xp-bar-fill" style={{ width: `${xpPercentage}%` }}></div>
           </div>
         </div>
       </div>
 
       <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
 
-      <div style={styles.contentContainer}>
-        
-        {/* 習慣タブ */}
+      <div className="content-container">
         {activeTab === 'HABIT' && (
-          <section style={styles.column}>
+          <section className="column">
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleDragEnd(e, 'HABIT')}>
               <SortableContext items={habits.map(t => t.id)} strategy={verticalListSortingStrategy}>
-                <div style={styles.list}>
+                <div className="task-list">
                   {habits.map((task) => (
                     <SortableTaskCard key={task.id} task={task} getTaskStatus={getTaskStatus} onEdit={(t) => { setEditingTask(t); setIsFormVisible(true); }} />
                   ))}
-                  {habits.length === 0 && <div style={styles.emptyState}>習慣タスクはありません</div>}
+                  {habits.length === 0 && <div className="empty-state">習慣タスクはありません</div>}
                 </div>
               </SortableContext>
             </DndContext>
-            <button onClick={() => { setEditingTask({ taskType: 'DAILY' }); setIsFormVisible(true); }} style={styles.floatingAddButton}>+</button>
+            <button onClick={() => { setEditingTask({ taskType: 'DAILY' }); setIsFormVisible(true); }} className="floating-add-button">+</button>
           </section>
         )}
 
-        {/* 一回きりタブ */}
         {activeTab === 'SINGLE' && (
-          <section style={styles.column}>
-            <div style={styles.sortButtonContainer}>
-              <button 
-                onClick={() => setSingleSortMode(m => m === 'SORT_ORDER' ? 'DEADLINE' : 'SORT_ORDER')}
-                style={singleSortMode === 'DEADLINE' ? { ...styles.sortButton, ...styles.activeSortButton } : styles.sortButton}
-              >
-                {singleSortMode === 'DEADLINE' ? '📅 期限の近い順' : '🔢 自由な並び順'}
+          <section className="column">
+            <div className="sort-container">
+              <button onClick={() => setSingleSortMode(m => m === 'SORT_ORDER' ? 'DEADLINE' : 'SORT_ORDER')} className={`sort-button ${singleSortMode === 'DEADLINE' ? 'active' : ''}`}>
+                {singleSortMode === 'DEADLINE' ? '📅 期限順' : '🔢 自由順'}
               </button>
             </div>
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleDragEnd(e, 'SINGLE')}>
               <SortableContext items={singles.map(t => t.id)} strategy={verticalListSortingStrategy} disabled={singleSortMode === 'DEADLINE'}>
-                <div style={styles.list}>
+                <div className="task-list">
                   {singles.map((task) => (
                     <SortableTaskCard key={task.id} task={task} getTaskStatus={getTaskStatus} onEdit={(t) => { setEditingTask(t); setIsFormVisible(true); }} />
                   ))}
-                  {singles.length === 0 && <div style={styles.emptyState}>一回切りタスクはありません</div>}
+                  {singles.length === 0 && <div className="empty-state">タスクはありません</div>}
                 </div>
               </SortableContext>
             </DndContext>
-            <button onClick={() => { setEditingTask({ taskType: 'SINGLE' }); setIsFormVisible(true); }} style={styles.floatingAddButton}>+</button>
+            <button onClick={() => { setEditingTask({ taskType: 'SINGLE' }); setIsFormVisible(true); }} className="floating-add-button">+</button>
           </section>
         )}
-
-        {/* カレンダータブ */}
-        {activeTab === 'CALENDAR' && (
-          <section style={styles.column}>
-            <CalendarView tasks={localTasks} events={calendarEvents} />
-          </section>
-        )}
-
       </div>
 
-      {/* モーダルフォーム群 */}
       {isFormVisible && <TaskCreateForm onComplete={() => { setIsFormVisible(false); setEditingTask(null); }} editTaskData={editingTask} />}
       {isSettingsVisible && <SettingsForm onComplete={() => setIsSettingsVisible(false)} initialData={userProfile} />}
     </div>

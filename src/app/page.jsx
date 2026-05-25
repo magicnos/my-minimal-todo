@@ -4,10 +4,11 @@ import TodoClientContent from '@/components/todo/TodoClientContent';
 export const dynamic = 'force-dynamic';
 
 /**
- * サーバー側でデータを取得するメインページ
+ * アプリのメインエントリーポイント（サーバーコンポーネント）
+ * データの取得とクライアントコンポーネントへの受け渡しを行います。
  */
 export default async function TodoMainPage() {
-  // ユーザープロファイルの取得（なければ作成）
+  // ユーザー情報の取得（初期化）
   let userProfile = await prisma.userProfile.findUnique({ where: { id: 1 } });
   if (!userProfile) {
     userProfile = await prisma.userProfile.create({
@@ -15,30 +16,16 @@ export default async function TodoMainPage() {
     });
   }
 
-  // データベースからタスク一覧を、通知データも含めて読み込みます
+  // タスク一覧の取得
   const allTodoTasks = await prisma.todoTask.findMany({
-    include: {
-      notifications: true, // 通知データも一緒に持ってくる
-    },
-    orderBy: {
-      createdAt: 'desc',
-    },
-  });
-
-  // カレンダーの予定を取得
-  const calendarEvents = await prisma.calendarEvent.findMany({
-    orderBy: { date: 'asc' }
+    include: { notifications: true },
+    orderBy: { createdAt: 'desc' },
   });
 
   return (
-    <main style={mainContainerStyle}>
-      <TodoClientContent 
-        initialTasks={JSON.parse(JSON.stringify(allTodoTasks))} 
-        userProfile={JSON.parse(JSON.stringify(userProfile))}
-        calendarEvents={JSON.parse(JSON.stringify(calendarEvents))}
-      />
-    </main>
+    <TodoClientContent 
+      initialTasks={JSON.parse(JSON.stringify(allTodoTasks))} 
+      userProfile={JSON.parse(JSON.stringify(userProfile))}
+    />
   );
 }
-
-const mainContainerStyle = { margin: '0 auto', minHeight: '100vh' };
