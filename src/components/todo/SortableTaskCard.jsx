@@ -70,7 +70,7 @@ export default function SortableTaskCard({
           {task.taskType !== 'SINGLE' && (
             <span style={progressInfoStyle}>{current}/{target > 0 ? target : '-'}</span>
           )}
-          <span style={rewardBadgeStyle}>{task.rewardXP}XP / {task.rewardPoints}P</span>
+          <span style={rewardBadgeStyle}>{task.rewardXP}XP</span>
           {isDone && target > 0 && <span style={doneBadgeStyle}>✅</span>}
         </div>
         <h3 style={taskTitleStyle}>{task.taskTitle}</h3>

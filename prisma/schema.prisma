@@ -40,7 +40,6 @@ model TodoTask {
   sortOrder               Int      @default(0)
 
   // 報酬設定
-  rewardPoints            Int      @default(10)
   rewardXP                Int      @default(10)
   rewardTiming            String   @default("EACH") // EACH (一回ごと), TOTAL (全達成時)
 
@@ -54,20 +53,10 @@ model TodoTask {
 // ユーザーのステータス
 model UserProfile {
   id            Int      @id @default(1)
-  points        Int      @default(0)
   xp            Int      @default(0)
   level         Int      @default(1)
   xpScaling     Int      @default(100) // レベルアップに必要なXPの倍率
   updatedAt     DateTime @updatedAt
-}
-
-// ご褒美
-model Reward {
-  id          Int      @id @default(autoincrement())
-  title       String
-  pointsCost  Int
-  sortOrder   Int      @default(0)
-  createdAt   DateTime @default(now())
 }
 
 // カレンダーの予定

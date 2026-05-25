@@ -15,7 +15,7 @@ async function getOrCreateProfile() {
   let profile = await prisma.userProfile.findUnique({ where: { id: 1 } });
   if (!profile) {
     profile = await prisma.userProfile.create({
-      data: { id: 1, points: 0, xp: 0, level: 1, xpScaling: 100 }
+      data: { id: 1, xp: 0, level: 1, xpScaling: 100 }
     });
   }
   return profile;
@@ -51,7 +51,6 @@ function extractTaskData(formData) {
     habitEndDay: taskType === 'MULTI_DAY' ? parseInt(formData.get('habitEndDay') || '0') : null,
     habitEndTime: taskType === 'MULTI_DAY' ? formData.get('habitEndTime') : null,
     habitTargetCount: parseInt(formData.get('habitTargetCount') || '1'),
-    rewardPoints: parseInt(formData.get('rewardPoints') || '10'),
     rewardXP: parseInt(formData.get('rewardXP') || '10'),
     rewardTiming: formData.get('rewardTiming') || "EACH",
   };
@@ -94,7 +93,7 @@ export async function updateTaskOrderAction(orderedIds) {
 }
 
 /**
- * タスクを完了（または取り消し）し、XPとポイントを更新する
+ * タスクを完了（または取り消し）し、XPを更新する
  * レベルアップの判定もここで行います。
  */
 export async function completeTaskAction(taskId, currentCount, isCancel = false) {
@@ -111,7 +110,6 @@ export async function completeTaskAction(taskId, currentCount, isCancel = false)
 
   const profile = await getOrCreateProfile();
   let addXP = 0;
-  let addPoints = 0;
 
   // 報酬を付与するタイミングか判定
   let target = task.habitTargetCount || 1;
@@ -124,13 +122,11 @@ export async function completeTaskAction(taskId, currentCount, isCancel = false)
 
   if (shouldGiveReward) {
     addXP = isCancel ? -task.rewardXP : task.rewardXP;
-    addPoints = isCancel ? -task.rewardPoints : task.rewardPoints;
   }
 
-  if (addXP !== 0 || addPoints !== 0) {
+  if (addXP !== 0) {
     let newXP = profile.xp + addXP;
     let newLevel = profile.level;
-    let newPoints = profile.points + addPoints;
     const xpScaling = profile.xpScaling || 100;
 
     // レベルアップのループ判定
@@ -150,7 +146,7 @@ export async function completeTaskAction(taskId, currentCount, isCancel = false)
 
     await prisma.userProfile.update({
       where: { id: 1 },
-      data: { xp: newXP, level: newLevel, points: newPoints }
+      data: { xp: newXP, level: newLevel }
     });
   }
 
@@ -171,87 +167,18 @@ export async function deleteTaskAction(taskId) {
 }
 
 /**
- * ユーザー設定（レベル、XP、ポイントなど）を直接更新する
+ * ユーザー設定（レベル、XPなど）を直接更新する
  */
 export async function updateSettingsAction(formData) {
   const level = parseInt(formData.get('level') || '1');
   const xp = parseInt(formData.get('xp') || '0');
-  const points = parseInt(formData.get('points') || '0');
   const xpScaling = parseInt(formData.get('xpScaling') || '100');
 
   await prisma.userProfile.update({
     where: { id: 1 },
-    data: { level, xp, points, xpScaling }
+    data: { level, xp, xpScaling }
   });
   revalidatePath('/');
-}
-
-/**
- * ご褒美項目を作成する
- */
-export async function createRewardAction(formData) {
-  const title = formData.get('title');
-  const pointsCost = parseInt(formData.get('pointsCost') || '0');
-  const lastReward = await prisma.reward.findFirst({ orderBy: { sortOrder: 'desc' } });
-  const newSortOrder = lastReward ? lastReward.sortOrder + 1 : 0;
-  
-  await prisma.reward.create({
-    data: { title, pointsCost, sortOrder: newSortOrder }
-  });
-  revalidatePath('/');
-}
-
-/**
- * ご褒美項目を更新する
- */
-export async function updateRewardAction(rewardId, formData) {
-  const title = formData.get('title');
-  const pointsCost = parseInt(formData.get('pointsCost') || '0');
-  
-  await prisma.reward.update({
-    where: { id: rewardId },
-    data: { title, pointsCost }
-  });
-  revalidatePath('/');
-}
-
-/**
- * ご褒美項目を削除する
- */
-export async function deleteRewardAction(rewardId) {
-  await prisma.reward.delete({ where: { id: rewardId } });
-  revalidatePath('/');
-}
-
-/**
- * ご褒美項目の並び順を更新する
- */
-export async function updateRewardOrderAction(orderedIds) {
-  for (let i = 0; i < orderedIds.length; i++) {
-    await prisma.reward.update({
-      where: { id: orderedIds[i] },
-      data: { sortOrder: i }
-    });
-  }
-  revalidatePath('/');
-}
-
-/**
- * 貯めたポイントをご褒美と交換する
- */
-export async function exchangeRewardAction(rewardId) {
-  const reward = await prisma.reward.findUnique({ where: { id: rewardId } });
-  const profile = await getOrCreateProfile();
-
-  if (reward && profile.points >= reward.pointsCost) {
-    await prisma.userProfile.update({
-      where: { id: 1 },
-      data: { points: profile.points - reward.pointsCost }
-    });
-    revalidatePath('/');
-    return { success: true, title: reward.title };
-  }
-  return { success: false, error: 'ポイントが足りません' };
 }
 
 /**
@@ -315,4 +242,3 @@ export async function deleteCalendarEventAction(eventId) {
 export async function getUserProfileAction() {
   return await getOrCreateProfile();
 }
-

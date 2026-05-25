@@ -18,17 +18,12 @@ import {
 
 // 自作コンポーネントとアクション
 import TaskCreateForm from './TaskCreateForm';
-import RewardCreateForm from './RewardCreateForm';
 import SettingsForm from './SettingsForm';
 import SortableTaskCard from './SortableTaskCard';
-import SortableRewardCard from './SortableRewardCard';
 import CalendarView from './CalendarView';
 import Tabs from '@/components/ui/Tabs';
 import { 
-  updateTaskOrderAction, 
-  deleteRewardAction, 
-  exchangeRewardAction, 
-  updateRewardOrderAction 
+  updateTaskOrderAction
 } from '@/app/actions';
 
 // カスタムフックとスタイル
@@ -37,21 +32,18 @@ import { styles } from './todoStyles';
 
 /**
  * Todoアプリのメインクライアントコンポーネント
- * タスク一覧、報酬、レベル表示などの状態管理と描画を担当します。
+ * タスク一覧、レベル表示などの状態管理と描画を担当します。
  */
-export default function TodoClientContent({ initialTasks, userProfile, rewards: initialRewards, calendarEvents }) {
+export default function TodoClientContent({ initialTasks, userProfile, calendarEvents }) {
   // --- 状態管理 (State) ---
   const [activeTab, setActiveTab] = useState('HABIT');
   const [isFormVisible, setIsFormVisible] = useState(false);
-  const [isRewardFormVisible, setIsRewardFormVisible] = useState(false);
   const [isSettingsVisible, setIsSettingsVisible] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
-  const [editingReward, setEditingReward] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [singleSortMode, setSingleSortMode] = useState('SORT_ORDER');
 
   const [localTasks, setLocalTasks] = useState([...initialTasks].sort((a, b) => a.sortOrder - b.sortOrder));
-  const [localRewards, setLocalRewards] = useState([...initialRewards].sort((a, b) => a.sortOrder - b.sortOrder));
 
   // --- カスタムフック (Hooks) ---
   const { getTaskStatus } = useTaskStatus(currentTime);
@@ -64,10 +56,6 @@ export default function TodoClientContent({ initialTasks, userProfile, rewards: 
   useEffect(() => {
     setLocalTasks([...initialTasks].sort((a, b) => a.sortOrder - b.sortOrder));
   }, [initialTasks]);
-
-  useEffect(() => {
-    setLocalRewards([...initialRewards].sort((a, b) => a.sortOrder - b.sortOrder));
-  }, [initialRewards]);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 30000);
@@ -85,15 +73,6 @@ export default function TodoClientContent({ initialTasks, userProfile, rewards: 
   const handleDragEnd = async (event, type) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-
-    if (type === 'REWARD') {
-      const oldIndex = localRewards.findIndex(r => r.id === active.id);
-      const newIndex = localRewards.findIndex(r => r.id === over.id);
-      const newRewards = arrayMove(localRewards, oldIndex, newIndex);
-      setLocalRewards(newRewards);
-      await updateRewardOrderAction(newRewards.map(r => r.id));
-      return;
-    }
 
     const relevantTasks = type === 'HABIT' 
       ? localTasks.filter(t => t.taskType !== 'SINGLE')
@@ -114,12 +93,6 @@ export default function TodoClientContent({ initialTasks, userProfile, rewards: 
     await updateTaskOrderAction(newAllTasks.map(t => t.id));
   };
 
-  const handleDeleteReward = async (id, title) => {
-    if (window.confirm(`「${title}」を削除してもよろしいですか？`)) {
-      await deleteRewardAction(id);
-    }
-  };
-
   // --- データのフィルタリングとソート ---
   const habits = localTasks.filter(t => t.taskType !== 'SINGLE');
   const singles = [...localTasks.filter(t => t.taskType === 'SINGLE')].sort((a, b) => {
@@ -133,7 +106,6 @@ export default function TodoClientContent({ initialTasks, userProfile, rewards: 
     { id: 'HABIT', label: '習慣', icon: '🔄' },
     { id: 'SINGLE', label: '一回きり', icon: '📍' },
     { id: 'CALENDAR', label: 'カレンダー', icon: '📅' },
-    { id: 'REWARD', label: 'ご褒美', icon: '🎁' },
   ];
 
   // --- レンダリング (Render) ---
@@ -144,7 +116,7 @@ export default function TodoClientContent({ initialTasks, userProfile, rewards: 
         <button onClick={() => setIsSettingsVisible(true)} style={styles.settingsButton} title="設定">⚙️</button>
       </header>
 
-      {/* ステータスバー (レベル、XP、ポイント) */}
+      {/* ステータスバー (レベル、XP) */}
       <div style={styles.statsContainer}>
         <div style={styles.statItem}>
           <div style={styles.statLabel}>LEVEL</div>
@@ -155,10 +127,6 @@ export default function TodoClientContent({ initialTasks, userProfile, rewards: 
           <div style={styles.xpProgressBarBg}>
             <div style={{ ...styles.xpProgressBarFill, width: `${xpPercentage}%` }}></div>
           </div>
-        </div>
-        <div style={styles.statItem}>
-          <div style={styles.statLabel}>POINTS</div>
-          <div style={styles.statValue}>🪙 {userProfile.points}</div>
         </div>
       </div>
 
@@ -215,41 +183,11 @@ export default function TodoClientContent({ initialTasks, userProfile, rewards: 
           </section>
         )}
 
-        {/* ご褒美タブ */}
-        {activeTab === 'REWARD' && (
-          <section style={styles.column}>
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleDragEnd(e, 'REWARD')}>
-              <SortableContext items={localRewards.map(r => r.id)} strategy={verticalListSortingStrategy}>
-                <div style={styles.list}>
-                  {localRewards.map((reward) => (
-                    <SortableRewardCard 
-                      key={reward.id} 
-                      reward={reward} 
-                      userPoints={userProfile.points}
-                      onEdit={(r) => { setEditingReward(r); setIsRewardFormVisible(true); }}
-                      onDelete={handleDeleteReward}
-                      onExchange={async (id) => {
-                        const res = await exchangeRewardAction(id);
-                        if (!res.success) alert(res.error);
-                        else alert(`「${res.title}」を交換しました！`);
-                      }}
-                    />
-                  ))}
-                  {localRewards.length === 0 && <div style={styles.emptyState}>ご褒美はまだありません</div>}
-                </div>
-              </SortableContext>
-            </DndContext>
-            <button onClick={() => { setEditingReward(null); setIsRewardFormVisible(true); }} style={styles.floatingAddButton}>+</button>
-          </section>
-        )}
-
       </div>
 
       {/* モーダルフォーム群 */}
       {isFormVisible && <TaskCreateForm onComplete={() => { setIsFormVisible(false); setEditingTask(null); }} editTaskData={editingTask} />}
-      {isRewardFormVisible && <RewardCreateForm onComplete={() => { setIsRewardFormVisible(false); setEditingReward(null); }} editData={editingReward} />}
       {isSettingsVisible && <SettingsForm onComplete={() => setIsSettingsVisible(false)} initialData={userProfile} />}
     </div>
   );
 }
-

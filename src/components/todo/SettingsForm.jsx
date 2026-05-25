@@ -27,11 +27,6 @@ export default function SettingsForm({ onComplete, initialData }) {
         </div>
 
         <div style={inputGroupStyle}>
-          <label style={labelStyle}>現在のポイント</label>
-          <input name="points" type="number" min="0" defaultValue={initialData.points} style={inputStyle} />
-        </div>
-
-        <div style={inputGroupStyle}>
           <label style={labelStyle}>レベルアップ倍率 (1Lvあたり必要なXP)</label>
           <input name="xpScaling" type="number" min="10" defaultValue={initialData.xpScaling || 100} style={inputStyle} />
           <p style={helpTextStyle}>※ 次のLvに必要なXP = 現在のレベル × この倍率</p>

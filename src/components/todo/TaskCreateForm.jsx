@@ -223,10 +223,6 @@ export default function TaskCreateForm({ onComplete, editTaskData }) {
             <label style={labelStyle}>獲得XP</label>
             <input name="rewardXP" type="number" min="0" defaultValue={editTaskData?.rewardXP ?? 10} style={inputStyle} />
           </div>
-          <div style={halfInputStyle}>
-            <label style={labelStyle}>獲得ポイント</label>
-            <input name="rewardPoints" type="number" min="0" defaultValue={editTaskData?.rewardPoints ?? 10} style={inputStyle} />
-          </div>
         </div>
 
         <div style={inputGroupStyle}>

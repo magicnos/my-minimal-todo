@@ -11,14 +11,9 @@ export default async function TodoMainPage() {
   let userProfile = await prisma.userProfile.findUnique({ where: { id: 1 } });
   if (!userProfile) {
     userProfile = await prisma.userProfile.create({
-      data: { id: 1, points: 0, xp: 0, level: 1 }
+      data: { id: 1, xp: 0, level: 1 }
     });
   }
-
-  // ご褒美リストの取得
-  const rewards = await prisma.reward.findMany({
-    orderBy: { createdAt: 'desc' }
-  });
 
   // データベースからタスク一覧を、通知データも含めて読み込みます
   const allTodoTasks = await prisma.todoTask.findMany({
@@ -40,7 +35,6 @@ export default async function TodoMainPage() {
       <TodoClientContent 
         initialTasks={JSON.parse(JSON.stringify(allTodoTasks))} 
         userProfile={JSON.parse(JSON.stringify(userProfile))}
-        rewards={JSON.parse(JSON.stringify(rewards))}
         calendarEvents={JSON.parse(JSON.stringify(calendarEvents))}
       />
     </main>
