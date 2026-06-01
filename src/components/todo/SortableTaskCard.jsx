@@ -49,7 +49,6 @@ export default function SortableTaskCard({ task, getTaskStatus, onEdit }) {
           {task.taskType !== 'SINGLE' && (
             <span className="progress-info">{current}/{target > 0 ? target : '-'}</span>
           )}
-          <span className="reward-badge">{task.rewardXP}XP</span>
           {isDone && target > 0 && <span>✅</span>}
         </div>
         <h3 className="task-title">{task.taskTitle}</h3>

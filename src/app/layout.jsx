@@ -2,7 +2,7 @@ import "./globals.css";
 
 export const metadata = {
   title: "Minimal Todo",
-  description: "Level & XP based simple todo app",
+  description: "Simple todo app",
 };
 
 export const viewport = {

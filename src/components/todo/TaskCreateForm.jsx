@@ -102,26 +102,11 @@ export default function TaskCreateForm({ onComplete, editTaskData }) {
           )}
         </div>
 
-        <div className="row">
-          <div className="col">
-            <label className="label">優先度</label>
-            <select name="taskPriority" defaultValue={editTaskData?.taskPriority || "MEDIUM"} className="select">
-              <option value="LOW">低</option><option value="MEDIUM">中</option><option value="HIGH">高</option>
-            </select>
-          </div>
-          {isHabitMode && (
-            <div className="col">
-              <label className="label">報酬タイミング</label>
-              <select name="rewardTiming" defaultValue={editTaskData?.rewardTiming || "EACH"} className="select">
-                <option value="EACH">1回ごと</option><option value="TOTAL">全達成時</option>
-              </select>
-            </div>
-          )}
-        </div>
-
         <div className="input-group">
-          <label className="label">獲得XP</label>
-          <input name="rewardXP" type="number" min="0" defaultValue={editTaskData?.rewardXP ?? 10} className="input" />
+          <label className="label">優先度</label>
+          <select name="taskPriority" defaultValue={editTaskData?.taskPriority || "MEDIUM"} className="select">
+            <option value="LOW">低</option><option value="MEDIUM">中</option><option value="HIGH">高</option>
+          </select>
         </div>
 
         <div className="input-group">

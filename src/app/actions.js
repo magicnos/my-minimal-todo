@@ -8,19 +8,6 @@ import prisma from '@/lib/prisma';
    ========================================== */
 
 /**
- * ユーザープロファイルを取得、存在しない場合は初期値で作成
- */
-async function getProfile() {
-  let profile = await prisma.userProfile.findUnique({ where: { id: 1 } });
-  if (!profile) {
-    profile = await prisma.userProfile.create({
-      data: { id: 1, xp: 0, level: 1, xpScaling: 100 }
-    });
-  }
-  return profile;
-}
-
-/**
  * フォームデータからタスク情報を抽出
  */
 function parseTaskFormData(formData) {
@@ -48,8 +35,6 @@ function parseTaskFormData(formData) {
     habitEndDay: taskType === 'MULTI_DAY' ? parseInt(formData.get('habitEndDay') || '0') : null,
     habitEndTime: taskType === 'MULTI_DAY' ? formData.get('habitEndTime') : null,
     habitTargetCount: parseInt(formData.get('habitTargetCount') || '1'),
-    rewardXP: parseInt(formData.get('rewardXP') || '10'),
-    rewardTiming: formData.get('rewardTiming') || "EACH",
   };
 }
 
@@ -93,7 +78,7 @@ export async function updateTaskOrderAction(orderedIds) {
 }
 
 /**
- * タスクの完了処理 (XP加算 / レベルアップ判定)
+ * タスクの完了処理
  */
 export async function completeTaskAction(taskId, currentCount, isCancel = false) {
   const task = await prisma.todoTask.findUnique({ where: { id: taskId } });
@@ -106,43 +91,6 @@ export async function completeTaskAction(taskId, currentCount, isCancel = false)
     where: { id: taskId },
     data: { completedCount: nextCount, lastCompletedAt: new Date() }
   });
-
-  // 報酬（XP）付与判定
-  let target = task.habitTargetCount || 1;
-  if (task.taskType === 'DAILY') {
-    target = task.habitDailySchedule?.[new Date().getDay()] || 0;
-  }
-
-  const isEACH = task.rewardTiming === 'EACH';
-  const isTOTALReached = task.rewardTiming === 'TOTAL' && (isCancel ? currentCount === target : nextCount === target);
-  
-  if (isEACH || isTOTALReached) {
-    const profile = await getProfile();
-    const addXP = isCancel ? -task.rewardXP : task.rewardXP;
-    
-    let newXP = profile.xp + addXP;
-    let newLevel = profile.level;
-    const scaling = profile.xpScaling || 100;
-
-    // レベルアップ / レベルダウン
-    if (addXP > 0) {
-      while (newXP >= newLevel * scaling) {
-        newXP -= newLevel * scaling;
-        newLevel++;
-      }
-    } else {
-      while (newXP < 0 && newLevel > 1) {
-        newLevel--;
-        newXP += newLevel * scaling;
-      }
-      if (newXP < 0) newXP = 0;
-    }
-
-    await prisma.userProfile.update({
-      where: { id: 1 },
-      data: { xp: newXP, level: newLevel }
-    });
-  }
 
   // 一回きりタスクの削除
   if (!isCancel && task.taskType === 'SINGLE' && nextCount >= 1) {
@@ -158,30 +106,4 @@ export async function completeTaskAction(taskId, currentCount, isCancel = false)
 export async function deleteTaskAction(taskId) {
   await prisma.todoTask.delete({ where: { id: taskId } });
   revalidatePath('/');
-}
-
-/* ==========================================
-   設定 / プロファイル関連のアクション
-   ========================================== */
-
-/**
- * ユーザー設定の一括更新
- */
-export async function updateSettingsAction(formData) {
-  const level = parseInt(formData.get('level') || '1');
-  const xp = parseInt(formData.get('xp') || '0');
-  const xpScaling = parseInt(formData.get('xpScaling') || '100');
-
-  await prisma.userProfile.update({
-    where: { id: 1 },
-    data: { level, xp, xpScaling }
-  });
-  revalidatePath('/');
-}
-
-/**
- * プロファイル取得
- */
-export async function getUserProfileAction() {
-  return await getProfile();
 }

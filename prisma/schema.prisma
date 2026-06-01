@@ -39,24 +39,11 @@ model TodoTask {
   // 並び順
   sortOrder               Int      @default(0)
 
-  // 報酬設定
-  rewardXP                Int      @default(10)
-  rewardTiming            String   @default("EACH") // EACH (一回ごと), TOTAL (全達成時)
-
   // 通知設定（復活）
   notifications           TaskNotification[]
 
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
-}
-
-// ユーザーのステータス
-model UserProfile {
-  id            Int      @id @default(1)
-  xp            Int      @default(0)
-  level         Int      @default(1)
-  xpScaling     Int      @default(100) // レベルアップに必要なXPの倍率
-  updatedAt     DateTime @updatedAt
 }
 
 // 通知時間のリスト（復活）

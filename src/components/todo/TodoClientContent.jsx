@@ -17,22 +17,17 @@ import {
 } from '@dnd-kit/sortable';
 
 import TaskCreateForm from './TaskCreateForm';
-import SettingsForm from './SettingsForm';
 import SortableTaskCard from './SortableTaskCard';
 import Tabs from '@/components/ui/Tabs';
-import LevelUpOverlay from '@/components/ui/LevelUpOverlay';
 import { updateTaskOrderAction } from '@/app/actions';
 import { useTaskStatus } from '@/hooks/useTaskStatus';
 
 /**
  * メインのクライアントコンポーネント
  */
-export default function TodoClientContent({ initialTasks, userProfile }) {
+export default function TodoClientContent({ initialTasks }) {
   const [activeTab, setActiveTab] = useState('HABIT');
   const [isFormVisible, setIsFormVisible] = useState(false);
-  const [isSettingsVisible, setIsSettingsVisible] = useState(false);
-  const [isLevelUp, setIsLevelUp] = useState(false);
-  const [lastLevel, setLastLevel] = useState(userProfile.level);
   const [editingTask, setEditingTask] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [singleSortMode, setSingleSortMode] = useState('SORT_ORDER');
@@ -52,18 +47,6 @@ export default function TodoClientContent({ initialTasks, userProfile }) {
     const timer = setInterval(() => setCurrentTime(new Date()), 30000);
     return () => clearInterval(timer);
   }, []);
-
-  // レベルアップの検知
-  useEffect(() => {
-    if (userProfile.level > lastLevel) {
-      setIsLevelUp(true);
-    }
-    setLastLevel(userProfile.level);
-  }, [userProfile.level, lastLevel]);
-
-  const xpScaling = userProfile.xpScaling || 100;
-  const xpToNextLevel = userProfile.level * xpScaling;
-  const xpPercentage = Math.min(100, (userProfile.xp / xpToNextLevel) * 100);
 
   const handleDragEnd = async (event, type) => {
     const { active, over } = event;
@@ -94,24 +77,6 @@ export default function TodoClientContent({ initialTasks, userProfile }) {
 
   return (
     <div className="main-wrapper">
-      <header className="header">
-        <h1 className="app-title">Minimal Todo</h1>
-        <button onClick={() => setIsSettingsVisible(true)} className="settings-button" title="設定">⚙️</button>
-      </header>
-
-      <div className="stats-container">
-        <div className="stat-item">
-          <div className="stat-label">LEVEL</div>
-          <div className="stat-value">{userProfile.level}</div>
-        </div>
-        <div className="xp-container">
-          <div className="stat-label">XP: {userProfile.xp} / {xpToNextLevel}</div>
-          <div className="xp-bar-bg">
-            <div className="xp-bar-fill" style={{ width: `${xpPercentage}%` }}></div>
-          </div>
-        </div>
-      </div>
-
       <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
 
       <div className="content-container">
@@ -154,8 +119,6 @@ export default function TodoClientContent({ initialTasks, userProfile }) {
       </div>
 
       {isFormVisible && <TaskCreateForm onComplete={() => { setIsFormVisible(false); setEditingTask(null); }} editTaskData={editingTask} />}
-      {isSettingsVisible && <SettingsForm onComplete={() => setIsSettingsVisible(false)} initialData={userProfile} />}
-      {isLevelUp && <LevelUpOverlay level={userProfile.level} onComplete={() => setIsLevelUp(false)} />}
     </div>
   );
 }
